@@ -1,71 +1,77 @@
 import { NextResponse } from 'next/server';
+import { supabase } from '@/utils/supabase'; // Đảm bảo import đúng đường dẫn supabase
 import { createClient } from '@supabase/supabase-js';
-
-// Dùng service_role để Backend có quyền Admin can thiệp vào Database
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! 
-);
 
 export async function POST(req: Request) {
   try {
-    // Nhận dữ liệu từ SePay gửi về
     const body = await req.json();
+
+    // 1. Lấy thông tin từ SePay bắn về
+    const amount = Number(body.transferAmount || 0);
+    const content = (body.content || "").toUpperCase();
+
+    // Nếu không phải giao dịch của web Gizmo thì bỏ qua
+    if (!content.includes('GIZMO')) {
+      return NextResponse.json({ message: 'Bỏ qua, không phải giao dịch Gizmo' }, { status: 200 });
+    }
+
+    // 2. Xác định khách mua gói nào và số tiền có đúng không
+    let plan = '';
+    let dailyShoots = 10;
     
-    const amountIn = body.amountIn; // Số tiền nhận được
-    const content = body.content;   // Nội dung chuyển khoản (VD: GIZMO PRO 1A2B3C)
-
-    if (!amountIn || !content) {
-      return NextResponse.json({ success: false, message: 'Dữ liệu không hợp lệ' });
+    if (content.includes('PRO') && amount >= 49000) { 
+        plan = 'pro'; dailyShoots = 20; 
+    } else if (content.includes('LIMITLESS') && amount >= 199000) { 
+        plan = 'limitless'; dailyShoots = 9999; 
+    } else if (content.includes('EXCLUSIVE') && amount >= 499000) { 
+        plan = 'exclusive'; dailyShoots = 9999; 
+    } else {
+        return NextResponse.json({ message: 'Sai số tiền hoặc sai tên gói' }, { status: 200 });
     }
 
-    const text = content.toUpperCase();
-    let planToUpgrade = null;
+    // 3. Trích xuất mã ID rút gọn của khách hàng (6 ký tự)
+    // Ví dụ: GIZMO PRO AF5C1C -> Lấy ra "AF5C1C"
+    const match = content.match(/GIZMO\s+(PRO|LIMITLESS|EXCLUSIVE)\s+([A-Z0-9]{6})/);
+    if (!match) {
+      return NextResponse.json({ message: 'Không tìm thấy mã ID khách hàng' }, { status: 200 });
+    }
+    const shortCode = match[2].toLowerCase();
 
-    // --- KIỂM TRA SỐ TIỀN VÀ CÚ PHÁP CHO CẢ 3 GÓI ---
-    if (text.includes('GIZMO PRO') && amountIn >= 49000) {
-      planToUpgrade = 'pro';
-    } else if (text.includes('GIZMO LIMITLESS') && amountIn >= 199000) {
-      planToUpgrade = 'limitless';
-    } else if (text.includes('GIZMO EXCLUSIVE') && amountIn >= 499000) {
-      planToUpgrade = 'exclusive';
+    // 4. Khởi tạo Supabase bằng Quyền Admin (Để xuyên qua lớp bảo mật sửa Database)
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY! // Bắt buộc phải có Key này trên Vercel
+    );
+
+    // 5. Tìm khách hàng trong Database dựa vào 6 ký tự đầu của ID
+    const { data: users, error: searchError } = await supabaseAdmin
+      .from('profiles')
+      .select('id');
+
+    if (searchError || !users) {
+      return NextResponse.json({ message: 'Lỗi truy xuất Database' }, { status: 500 });
     }
 
-    if (planToUpgrade) {
-      // Tách lấy mã Code (6 ký tự) của người dùng từ nội dung chuyển khoản
-      const parts = text.split(' ');
-      const userCode = parts[parts.length - 1]; 
+    // Tìm chính xác user có ID bắt đầu bằng 6 ký tự đó
+    const matchedUser = users.find(u => u.id.toLowerCase().startsWith(shortCode));
 
-      // Tìm user có ID bắt đầu bằng mã code này
-      const { data: users, error: searchError } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .ilike('id', `${userCode}%`) // Tìm ID bắt đầu bằng 6 ký tự
-        .limit(1);
-
-      if (users && users.length > 0) {
-        const targetUserId = users[0].id;
-
-        // Tiến hành nâng cấp Gói cước và Reset lại lượt ngay lập tức
-        // Pro = 20 lượt, Limitless và Exclusive = 9999 (Vô hạn)
-        const dailyShoots = planToUpgrade === 'pro' ? 20 : 9999;
-        
-        await supabaseAdmin
-          .from('profiles')
-          .update({ 
-            plan: planToUpgrade,
-            daily_shoots: dailyShoots
-          })
-          .eq('id', targetUserId);
-          
-        console.log(`[Thành công] Đã nâng cấp ${planToUpgrade} cho user ${targetUserId}`);
-      }
+    if (!matchedUser) {
+      return NextResponse.json({ message: 'Không tìm thấy User này trong hệ thống' }, { status: 200 });
     }
 
-    return NextResponse.json({ success: true, message: 'Đã xử lý giao dịch' });
+    // 6. Nâng cấp VIP cho User
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ plan: plan, daily_shoots: dailyShoots })
+      .eq('id', matchedUser.id);
+
+    if (updateError) {
+      return NextResponse.json({ message: 'Lỗi cập nhật VIP' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: `Kích hoạt VIP ${plan} thành công!` }, { status: 200 });
 
   } catch (error: any) {
-    console.error("Lỗi Webhook:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ message: 'Lỗi Server nội bộ', error: error.message }, { status: 500 });
   }
 }
