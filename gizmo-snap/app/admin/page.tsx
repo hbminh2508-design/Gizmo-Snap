@@ -239,7 +239,7 @@ export default function AdminBios() {
           </div>
         </div>
       </div>
-      <style dangerouslySetInlineStyle={{__html: `
+      <style dangerouslySetInnerHTML={{__html: `
         .blink { animation: blinker 1s linear infinite; }
         @keyframes blinker { 50% { opacity: 0; } }
       `}} />
