@@ -29,20 +29,26 @@ const loadImage = (url: string): Promise<HTMLImageElement> => {
   });
 };
 
-// CẤU HÌNH THÔNG MINH CHO CÁC KHUNG VẼ
+// ==========================================
+// CẤU HÌNH THÔNG MINH (ĐÃ THÊM CHARM DÀNH CHO PHÁI NỮ)
+// ==========================================
 const THEME_CONFIGS: Record<string, any> = {
-  minimal: { bg: '#ffffff', border: '#ffffff', shadow: 'rgba(0,0,0,0.15)', title: 'MINIMAL', titleColor: '#404040', font: '300 60px Arial' },
-  dark: { bgGradient: ['#0f172a', '#1e293b'], border: '#334155', title: 'DARK CLASSIC', titleColor: '#94a3b8', font: 'bold 60px Arial' },
-  pink: { bgGradient: ['#fdf2f8', '#fbcfe8'], border: '#f9a8d4', title: 'PINKY', titleColor: '#db2777', font: 'bold 60px "Comic Sans MS", cursive' },
-  ocean: { bgGradient: ['#e0f2fe', '#7dd3fc'], border: '#ffffff', title: 'OCEAN BREEZE', titleColor: '#0284c7', font: 'bold 60px Arial' },
-  sunset: { bgGradient: ['#fef08a', '#f97316'], border: '#ffffff', title: 'SUNSET GLOW', titleColor: '#9a3412', font: 'bold 60px Arial' },
-  pastel: { bgGradient: ['#f3e8ff', '#fce7f3'], border: '#ffffff', title: 'DREAM', titleColor: '#c084fc', font: 'bold 60px "Comic Sans MS"' },
-  nature: { bg: '#dcfce7', border: '#bbf7d0', title: 'BOTANICAL', titleColor: '#166534', font: 'italic 60px Georgia' },
-  y2k: { bgGradient: ['#f4f4f5', '#d4d4d8'], border: '#a1a1aa', title: 'Y2K CYBER', titleColor: '#3f3f46', pattern: 'stars', font: 'bold 60px "Courier New"' },
+  minimal: { bg: '#ffffff', border: '#ffffff', shadow: 'rgba(0,0,0,0.08)', title: 'MINIMAL', titleColor: '#404040', font: '300 60px Arial' },
+  dark: { bgGradient: ['#0f172a', '#020617'], border: '#1e293b', title: 'DARK CLASSIC', titleColor: '#94a3b8', font: 'bold 60px Arial' },
+  // Khung Pink: Thêm Trái tim đính kèm
+  pink: { bgGradient: ['#fff1f2', '#ffe4e6'], border: '#ffffff', shadow: 'rgba(219,39,119,0.15)', title: 'PINKY', titleColor: '#db2777', font: 'bold 60px "Comic Sans MS", cursive', charmType: 'heart', charmColor: '#f472b6' },
+  // Khung Ocean: Thêm Lấp lánh (Sparkle)
+  ocean: { bgGradient: ['#e0f2fe', '#bae6fd'], border: '#ffffff', shadow: 'rgba(2,132,199,0.15)', title: 'OCEAN BREEZE', titleColor: '#0284c7', font: 'bold 60px Arial', charmType: 'sparkle', charmColor: '#38bdf8' },
+  sunset: { bgGradient: ['#fff7ed', '#ffedd5'], border: '#ffffff', shadow: 'rgba(154,52,18,0.15)', title: 'SUNSET GLOW', titleColor: '#9a3412', font: 'bold 60px Arial', charmType: 'star', charmColor: '#fb923c' },
+  // Khung Pastel: Thêm Trái tim tím mộng mơ
+  pastel: { bgGradient: ['#faf5ff', '#f3e8ff'], border: '#ffffff', shadow: 'rgba(192,132,252,0.15)', title: 'DREAM', titleColor: '#c084fc', font: 'bold 60px "Comic Sans MS"', charmType: 'heart', charmColor: '#d8b4fe' },
+  // Khung Nature: Thêm họa tiết Hoa
+  nature: { bg: '#f0fdf4', border: '#ffffff', shadow: 'rgba(22,101,52,0.1)', title: 'BOTANICAL', titleColor: '#166534', font: 'italic 60px Georgia', charmType: 'flower', charmColor: '#4ade80' },
+  y2k: { bgGradient: ['#fafafa', '#f4f4f5'], border: '#ffffff', title: 'Y2K CYBER', titleColor: '#18181b', pattern: 'stars', font: 'bold 60px "Courier New"', charmType: 'star', charmColor: '#a1a1aa' },
   golden: { bgGradient: ['#713f12', '#ca8a04'], border: '#fef08a', title: 'GOLDEN HOUR', titleColor: '#fef08a', glow: '#ca8a04', font: 'italic 60px "Times New Roman"' },
-  cyberpunk: { bg: '#2e1065', border: '#22d3ee', title: 'CYBER CITY', titleColor: '#f0abfc', glow: '#c026d3', pattern: 'grid', font: 'bold 60px "Courier New"' },
   newspaper: { bg: '#f5f5f4', border: '#1c1917', title: 'THE DAILY NEWS', titleColor: '#1c1917', pattern: 'text', font: 'bold 70px "Times New Roman"' },
-  kawaii: { bgGradient: ['#fbcfe8', '#fde047'], border: '#ffffff', title: 'KAWAII MAGIC', titleColor: '#db2777', pattern: 'sparkles', font: 'bold 60px "Comic Sans MS"' },
+  // Khung Kawaii VIP: Thêm Nơ (Bow)
+  kawaii: { bgGradient: ['#fbcfe8', '#fde047'], border: '#ffffff', title: 'KAWAII MAGIC', titleColor: '#db2777', pattern: 'sparkles', font: 'bold 60px "Comic Sans MS"', charmType: 'bow', charmColor: '#f472b6' },
   gothic: { bg: '#171717', border: '#991b1b', title: 'DARK GOTHIC', titleColor: '#ef4444', font: 'italic 60px Georgia' },
   holo: { bgGradientHolo: true, border: '#ffffff', title: 'HOLOGRAPHIC', titleColor: '#ffffff', shadow: 'rgba(255,255,255,0.8)', font: 'bold 60px Arial' },
   spiderman: { bg: '#b91c1c', border: '#1d4ed8', title: 'SPIDER-VERSE', titleColor: '#facc15', font: 'bold 70px Arial' },
@@ -62,6 +68,44 @@ export default function FrameComposer({
     }
   }, [isLoading, photos, layout, theme]);
 
+  // ==========================================
+  // BỘ CÔNG CỤ VẼ CHARM TRANG TRÍ (DÀNH CHO PHÁI NỮ)
+  // ==========================================
+  const drawHeartCharm = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-10 * Math.PI / 180); ctx.beginPath();
+    ctx.moveTo(0, size * 0.3); ctx.bezierCurveTo(0, 0, -size/2, 0, -size/2, size*0.3); ctx.bezierCurveTo(-size/2, size*0.6, 0, size, 0, size);
+    ctx.bezierCurveTo(0, size, size/2, size*0.6, size/2, size*0.3); ctx.bezierCurveTo(size/2, 0, 0, 0, 0, size*0.3);
+    ctx.fillStyle = color; ctx.fill(); ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 4; ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fill(); ctx.restore();
+  };
+
+  const drawStarCharm = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(15 * Math.PI / 180); ctx.beginPath(); const outerR = size, innerR = size/2;
+    for(let i=0; i<5; i++) {
+        ctx.lineTo(Math.cos((18+i*72)*Math.PI/180)*outerR, Math.sin((18+i*72)*Math.PI/180)*outerR);
+        ctx.lineTo(Math.cos((54+i*72)*Math.PI/180)*innerR, Math.sin((54+i*72)*Math.PI/180)*innerR);
+    } ctx.closePath(); ctx.fillStyle = color; ctx.fill(); ctx.restore();
+  };
+
+  const drawFlowerCharm = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) => {
+    ctx.save(); ctx.translate(x, y); const petals = 5;
+    for(let i=0; i<petals; i++) {
+        ctx.beginPath(); ctx.rotate(360/petals * Math.PI/180); ctx.ellipse(size*0.7, 0, size*0.7, size*0.4, 0, 0, Math.PI*2); ctx.fillStyle = color; ctx.fill();
+    } ctx.beginPath(); ctx.arc(0, 0, size*0.4, 0, Math.PI*2); ctx.fillStyle = '#fef08a'; ctx.fill(); ctx.restore();
+  };
+
+  const drawSparkleCharm = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) => {
+     ctx.save(); ctx.translate(x, y); ctx.fillStyle = color;
+     const path = new Path2D("M50,0 L61.8,38.2 L100,50 L61.8,61.8 L50,100 L38.2,61.8 L0,50 L38.2,38.2 Z");
+     ctx.scale(size/100, size/100); ctx.fill(path); ctx.restore();
+  };
+
+  const drawBowCharm = (ctx: CanvasRenderingContext2D, x: number, y: number, angleDeg: number, scaleFactor: number, color: string) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate((angleDeg * Math.PI) / 180); ctx.scale(1.5 * scaleFactor, 1.5 * scaleFactor);
+    ctx.shadowColor = 'rgba(0,0,0,0.2)'; ctx.shadowBlur = 4; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
+    const path = new Path2D("M 20 15 C 10 0, 0 10, 10 25 C 0 40, 10 50, 20 35 C 25 35, 35 35, 40 35 C 50 50, 60 40, 50 25 C 60 10, 50 0, 40 15 C 35 15, 25 15, 20 15 Z M 30 25 m -8 0 a 8 8 0 1 0 16 0 a 8 8 0 1 0 -16 0");
+    ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.stroke(path); ctx.restore();
+  };
+
   const drawImageCover = (
     ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number,
     w: number, h: number, radius: number = 0, filterCss: string = '', smoothness: number = 0
@@ -70,45 +114,34 @@ export default function FrameComposer({
     const targetRatio = w / h;
     let sx, sy, sWidth, sHeight;
 
-    if (imgRatio > targetRatio) {
-      sHeight = img.height; sWidth = img.height * targetRatio; sx = (img.width - sWidth) / 2; sy = 0;
-    } else {
-      sWidth = img.width; sHeight = img.width / targetRatio; sx = 0; sy = (img.height - sHeight) / 2;
-    }
+    if (imgRatio > targetRatio) { sHeight = img.height; sWidth = img.height * targetRatio; sx = (img.width - sWidth) / 2; sy = 0; }
+    else { sWidth = img.width; sHeight = img.width / targetRatio; sx = 0; sy = (img.height - sHeight) / 2; }
 
     ctx.save();
     if (radius > 0) { ctx.beginPath(); ctx.roundRect(x, y, w, h, radius); ctx.clip(); }
 
     if (smoothness > 0 || filterCss !== '') {
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = img.width; tempCanvas.height = img.height;
+      const tempCanvas = document.createElement('canvas'); tempCanvas.width = img.width; tempCanvas.height = img.height;
       const tempCtx = tempCanvas.getContext('2d');
       if (tempCtx) {
         tempCtx.drawImage(img, 0, 0);
-        if (smoothness > 0) {
-          tempCtx.filter = `blur(${smoothness / 10}px) brightness(${1 + smoothness / 200})`;
-          tempCtx.drawImage(tempCanvas, 0, 0); tempCtx.filter = 'none'; 
-        }
-        if (filterCss !== '') {
-          tempCtx.filter = filterCss; tempCtx.drawImage(tempCanvas, 0, 0); tempCtx.filter = 'none';
-        }
+        if (smoothness > 0) { tempCtx.filter = `blur(${smoothness / 10}px) brightness(${1 + smoothness / 200})`; tempCtx.drawImage(tempCanvas, 0, 0); tempCtx.filter = 'none'; }
+        if (filterCss !== '') { tempCtx.filter = filterCss; tempCtx.drawImage(tempCanvas, 0, 0); tempCtx.filter = 'none'; }
         ctx.drawImage(tempCanvas, sx, sy, sWidth, sHeight, x, y, w, h);
       }
-    } else {
-      ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h);
-    }
+    } else { ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h); }
     ctx.restore();
   };
 
   const generateFrame = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
+    
+    // Tối ưu để logo VNU và charm không bị răng cưa
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
 
     try {
-      let imgW = 640, imgH = 360; 
-      let coords: {x: number, y: number}[] = [];
-      
-      // Khởi tạo kích thước theo Layout
+      let imgW = 640, imgH = 360; let coords: {x: number, y: number}[] = [];
       if (layout === '2x2') { canvas.width = 1400; canvas.height = 1000; coords = [ { x: 40, y: 140 }, { x: 720, y: 140 }, { x: 40, y: 540 }, { x: 720, y: 540 } ]; }
       else if (layout === 'strip3') { canvas.width = 720; canvas.height = 1350; coords = [ { x: 40, y: 140 }, { x: 40, y: 520 }, { x: 40, y: 900 } ]; }
       else if (layout === 'strip4') { canvas.width = 720; canvas.height = 1750; coords = [ { x: 40, y: 140 }, { x: 40, y: 520 }, { x: 40, y: 900 }, { x: 40, y: 1280 } ]; }
@@ -127,14 +160,14 @@ export default function FrameComposer({
       const filterCss = filtersData.find(f => f.id === selectedFilter)?.css || '';
 
       // TÁCH LUỒNG: THEME CUSTOM & THEME CẤU HÌNH ĐỘNG
-      // Truyền thêm param `layout` để các hàm biết đường tối ưu lề và chữ
-      // ĐÃ KHÔI PHỤC: Nhận diện 'vnu_theme'
-      if (['30_4', 'hello_kitty', 'wedding', 'neon', 'retro', 'vnu_theme'].includes(theme)) {
+      const customThemes = ['30_4', 'hello_kitty', 'wedding', 'neon', 'retro', 'cyberpunk', 'vnu_theme'];
+      if (customThemes.includes(theme)) {
          if (theme === '30_4') draw30_4Theme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'hello_kitty') drawHelloKittyTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'wedding') drawWeddingTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'neon') drawNeonTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'retro') drawRetroTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
+         if (theme === 'cyberpunk') drawCyberpunkTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'vnu_theme') await drawVNUTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
       } else {
          const config = THEME_CONFIGS[theme] || THEME_CONFIGS['minimal'];
@@ -145,23 +178,18 @@ export default function FrameComposer({
       if (!isPremium) {
         const newHeight = canvas.height + 40;
         const tempCanvas = document.createElement('canvas'); tempCanvas.width = canvas.width; tempCanvas.height = newHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-        if (tempCtx) {
-          tempCtx.drawImage(canvas, 0, 0);
-          tempCtx.fillStyle = '#0f172a'; tempCtx.fillRect(0, canvas.height, canvas.width, 40);
+        const tempCtx = tempCanvas.getContext('2d'); if (tempCtx) {
+          tempCtx.drawImage(canvas, 0, 0); tempCtx.fillStyle = '#0f172a'; tempCtx.fillRect(0, canvas.height, canvas.width, 40);
           tempCtx.fillStyle = 'rgba(255,255,255,0.8)'; tempCtx.font = 'bold 20px "Courier New"'; tempCtx.textAlign = 'right';
           tempCtx.fillText('Gizmo by UET-ER', canvas.width - 40, canvas.height + 26);
           onGenerateSuccess(tempCanvas.toDataURL('image/jpeg', 0.9));
         }
-      } else {
-        onGenerateSuccess(canvas.toDataURL('image/jpeg', 0.9));
-      }
-
+      } else { onGenerateSuccess(canvas.toDataURL('image/jpeg', 0.9)); }
     } catch (error) { console.error(error); onGenerateError(error); }
   };
 
   // ========================================================
-  // BỘ MÁY VẼ THÔNG MINH (CÓ TỐI ƯU MARGIN & FONT THEO LAYOUT)
+  // BỘ MÁY VẼ THÔNG MINH (XỬ LÝ ĐỘNG CÁC CHARM NỮ TÍNH)
   // ========================================================
   const drawConfigTheme = (
     ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[],
@@ -170,66 +198,61 @@ export default function FrameComposer({
     // 1. Vẽ Background
     if (config.bgGradientHolo) {
       const g = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      g.addColorStop(0, '#c4b5fd'); g.addColorStop(0.3, '#fbcfe8'); g.addColorStop(0.6, '#86efac'); g.addColorStop(1, '#67e8f9');
+      g.addColorStop(0, '#f9a8d4'); g.addColorStop(0.3, '#fbcfe8'); g.addColorStop(0.6, '#bae6fd'); g.addColorStop(1, '#a7f3d0');
       ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height);
     } else if (config.bgGradient) {
       const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      g.addColorStop(0, config.bgGradient[0]); g.addColorStop(1, config.bgGradient[1]);
-      ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    } else {
-      ctx.fillStyle = config.bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      g.addColorStop(0, config.bgGradient[0]); g.addColorStop(1, config.bgGradient[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else { ctx.fillStyle = config.bg; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+
+    // Pattern nền
+    if (config.pattern === 'stars') {
+      ctx.fillStyle = config.charmColor || 'rgba(0,0,0,0.1)';
+      for(let i=0; i<30; i++) { drawStarCharm(ctx, Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*8+2, ctx.fillStyle as string); }
+    } else if (config.pattern === 'sparkles') {
+      for(let i=0; i<30; i++) { drawSparkleCharm(ctx, Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*15+5, '#ffffff'); }
     }
 
-    // 2. Vẽ Họa tiết đè lên Background
-    if (config.pattern === 'grid') {
-      ctx.strokeStyle = 'rgba(192, 38, 211, 0.3)'; ctx.lineWidth = 2;
-      for (let i = 0; i < canvas.width; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
-      for (let i = 0; i < canvas.height; i += 40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
-    } else if (config.pattern === 'stars' || config.pattern === 'sparkles') {
-      ctx.fillStyle = config.pattern === 'stars' ? '#71717a' : '#ffffff';
-      for(let i = 0; i < 30; i++) {
-        ctx.beginPath(); ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 4 + 1, 0, Math.PI * 2); ctx.fill();
-      }
-    } else if (config.pattern === 'text') {
-      ctx.fillStyle = 'rgba(0,0,0,0.05)'; ctx.font = '14px serif';
-      for(let y = 0; y < canvas.height; y += 20) { ctx.fillText("BREAKING NEWS DAILY EDITION ".repeat(10), 0, y); }
-    }
-
-    // 3. Tối ưu Font Size và Vị trí Tiêu đề theo Layout
+    // Tiêu đề
     let fontSize = layout === 'film' ? 70 : (layout.startsWith('strip') ? 45 : 60);
     const fontString = config.font.replace(/\d+px/, `${fontSize}px`);
-    ctx.fillStyle = config.titleColor; ctx.font = fontString;
-    ctx.textAlign = 'center';
-    
-    // Nếu là polaroid, khoảng trống lớn nằm ở dưới -> Chữ nằm ở dưới
-    if (layout === 'polaroid') {
-      ctx.fillText(config.title, canvas.width / 2, canvas.height - 70);
-    } else {
-      ctx.fillText(config.title, canvas.width / 2, 80);
-    }
+    ctx.fillStyle = config.titleColor; ctx.font = fontString; ctx.textAlign = 'center';
+    if (layout === 'polaroid') { ctx.fillText(config.title, canvas.width / 2, canvas.height - 70); }
+    else { ctx.fillText(config.title, canvas.width / 2, 80); }
 
-    // 4. Tối ưu Margin viền ảnh để KHÔNG BỊ CHỒNG LÊN NHAU
-    // Strip gap chỉ có 20px, nên border max là 8px (8+8=16 < 20). 2x2/Film gap 40px, border max 15px.
     const m = layout.startsWith('strip') ? 8 : 15;
-
     for (let i = 0; i < images.length; i++) {
       const cx = coords[i].x, cy = coords[i].y;
       
-      if (config.shadow) {
-        ctx.shadowColor = config.shadow; ctx.shadowBlur = 20; ctx.fillStyle = config.border;
-        ctx.fillRect(cx - m, cy - m, imgW + m*2, imgH + m*2); ctx.shadowColor = 'transparent';
-      } else if (config.glow) {
-        ctx.shadowColor = config.glow; ctx.shadowBlur = 30; ctx.fillStyle = config.border;
-        ctx.fillRect(cx - m, cy - m, imgW + m*2, imgH + m*2); ctx.shadowColor = 'transparent';
-      } else {
-        ctx.fillStyle = config.border; ctx.fillRect(cx - m, cy - m, imgW + m*2, imgH + m*2);
+      ctx.fillStyle = config.border;
+      if (config.shadow) { ctx.shadowColor = config.shadow; ctx.shadowBlur = 15; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2; }
+      else if (config.glow) { ctx.shadowColor = config.glow; ctx.shadowBlur = 20; }
+      
+      // Bo góc viền ảnh mềm mại hơn cho các theme pastel/pink
+      const isSoftTheme = theme === 'pastel' || theme === 'pink' || theme === 'kawaii';
+      if (isSoftTheme) {
+        ctx.beginPath(); ctx.roundRect(cx - m, cy - m, imgW + m*2, imgH + m*2, 10); ctx.fill();
+      } else { ctx.fillRect(cx - m, cy - m, imgW + m*2, imgH + m*2); }
+      
+      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+      
+      drawImageCover(ctx, images[i], cx, cy, imgW, imgH, isSoftTheme ? 8 : 0, filterCss, smoothness);
+      
+      // Gắn Charm Động (Tim, Nơ, Hoa, Sao) lên góc ảnh
+      if (config.charmType && config.charmColor) {
+        const charmX = cx + imgW - 10;
+        const charmY = cy + 10;
+        if (config.charmType === 'heart') drawHeartCharm(ctx, charmX, charmY, 20, config.charmColor);
+        else if (config.charmType === 'star') drawStarCharm(ctx, charmX, charmY, 15, config.charmColor);
+        else if (config.charmType === 'flower') drawFlowerCharm(ctx, charmX, charmY, 15, config.charmColor);
+        else if (config.charmType === 'bow') drawBowCharm(ctx, cx + 15, cy - 10, -15, 0.7, config.charmColor);
+        else if (config.charmType === 'sparkle') drawSparkleCharm(ctx, charmX, charmY, 20, config.charmColor);
       }
-      drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 0, filterCss, smoothness);
     }
   };
 
   // ==========================================
-  // CÁC THEME ĐẶC BIỆT (VẼ THỦ CÔNG) - ĐÃ TỐI ƯU THEO LAYOUT
+  // CÁC THEME ĐẶC BIỆT (ĐÃ KHÔI PHỤC VÀ TRANG TRÍ CHUẨN)
   // ==========================================
   const drawStamp = (ctx: CanvasRenderingContext2D, x: number, y: number, angleDeg: number, bgThemeColor: string) => {
     ctx.save(); ctx.translate(x, y); ctx.rotate((angleDeg * Math.PI) / 180);
@@ -245,18 +268,10 @@ export default function FrameComposer({
     ctx.restore();
   };
 
-  const drawKittyBow = (ctx: CanvasRenderingContext2D, x: number, y: number, angleDeg: number, scaleFactor: number = 1) => {
-    ctx.save(); ctx.translate(x, y); ctx.rotate((angleDeg * Math.PI) / 180); ctx.scale(1.5 * scaleFactor, 1.5 * scaleFactor);
-    ctx.shadowColor = 'rgba(244,114,182,0.6)'; ctx.shadowBlur = 8; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-    const path = new Path2D("M 20 15 C 10 0, 0 10, 10 25 C 0 40, 10 50, 20 35 C 25 35, 35 35, 40 35 C 50 50, 60 40, 50 25 C 60 10, 50 0, 40 15 C 35 15, 25 15, 20 15 Z M 30 25 m -8 0 a 8 8 0 1 0 16 0 a 8 8 0 1 0 -16 0");
-    ctx.fillStyle = '#f472b6'; ctx.fill(path); ctx.strokeStyle = '#be185d'; ctx.lineWidth = 2; ctx.stroke(path); ctx.restore();
-  };
-
+  // 1. Theme 30/4 (Đã khôi phục)
   const draw30_4Theme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string) => {
     const RED_BG = '#991b1b'; ctx.fillStyle = RED_BG; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const m = layout.startsWith('strip') ? 8 : 15; // Tối ưu viền ảnh
-
-    // Vẽ Tiêu đề và Footer tổng thể thay vì in dưới từng ảnh (Gây lỗi đè chữ)
+    const m = layout.startsWith('strip') ? 8 : 15; 
     ctx.textAlign = 'center';
     if (layout === 'polaroid') {
        ctx.fillStyle = '#fca5a5'; ctx.font = 'bold 40px Courier New'; ctx.fillText('KỶ NIỆM 30/4', canvas.width / 2, canvas.height - 70);
@@ -274,136 +289,160 @@ export default function FrameComposer({
       ctx.fillStyle = '#000'; ctx.fillRect(cx - m, cy - m, imgW + m*2, imgH + m*2);
       drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 0, filterCss, smoothness);
     }
-    
-    // Trang trí tem thư chung cho toàn canvas (không gắn vào từng ảnh)
-    drawStamp(ctx, 40, 40, -10, RED_BG);
-    drawStamp(ctx, canvas.width - 150, canvas.height - 200, 15, RED_BG);
+    drawStamp(ctx, 40, 40, -10, RED_BG); drawStamp(ctx, canvas.width - 150, canvas.height - 200, 15, RED_BG);
   };
 
+  // 2. Hello Kitty Theme -> Có Nơ và Trái Tim
   const drawHelloKittyTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string) => {
     ctx.fillStyle = '#fce7f3'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#fbcfe8'; ctx.lineWidth = 2; for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); } for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+    for(let i=0; i<30; i++) { drawSparkleCharm(ctx, Math.random()*canvas.width, Math.random()*canvas.height, 6, '#ffffff'); }
     
     ctx.shadowColor = '#f9a8d4'; ctx.shadowBlur = 10; ctx.fillStyle = '#be185d'; 
     ctx.font = `bold ${layout.startsWith('strip') ? 45 : 60}px Arial`; ctx.textAlign = 'center'; 
     if (layout === 'polaroid') ctx.fillText('HELLO KITTY', canvas.width / 2, canvas.height - 70);
-    else ctx.fillText('HELLO KITTY', canvas.width / 2, 80);
-    ctx.shadowColor = 'transparent';
+    else ctx.fillText('HELLO KITTY ADVENTURE', canvas.width / 2, 80); ctx.shadowColor = 'transparent';
 
     const m = layout.startsWith('strip') ? 8 : 15;
     for (let i = 0; i < images.length; i++) {
       const cx = coords[i].x, cy = coords[i].y;
-      ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 15; ctx.fillStyle = '#ffffff'; 
+      ctx.shadowColor = 'rgba(219,39,119,0.15)'; ctx.shadowBlur = 15; ctx.fillStyle = '#ffffff'; 
       ctx.beginPath(); ctx.roundRect(cx - m, cy - m, imgW + m*2, imgH + m*2, 20); ctx.fill(); ctx.shadowColor = 'transparent';
       ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 4; ctx.stroke();
       drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 10, filterCss, smoothness);
       
-      // Nơ nhỏ gọn ở góc ảnh (không bị lẹm viền)
-      drawKittyBow(ctx, cx - 15, cy - 15, -15, 0.6);
+      drawBowCharm(ctx, cx + 15, cy - 10, -15, 0.7, '#f472b6');
+      drawHeartCharm(ctx, cx + imgW - 15, cy + imgH - 15, 18, '#db2777'); 
     }
   };
 
+  // 3. Wedding Theme -> Trái tim và Hoa hồng, viền vàng
   const drawWeddingTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string) => {
-    ctx.fillStyle = '#fafaf9'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#d97706'; ctx.lineWidth = 4; ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40); ctx.strokeStyle = '#fcd34d'; ctx.lineWidth = 1; ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
+    const PearlBG = ctx.createLinearGradient(0, 0, canvas.width, canvas.height); PearlBG.addColorStop(0, '#fffcf8'); PearlBG.addColorStop(1, '#fdfaf5'); ctx.fillStyle = PearlBG; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#c4a77d'; ctx.lineWidth = 2; ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40); ctx.strokeStyle = '#e2cfac'; ctx.lineWidth = 1; ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
     
-    ctx.fillStyle = '#b45309'; ctx.font = `italic ${layout.startsWith('strip') ? 45 : 50}px "Times New Roman", serif`; ctx.textAlign = 'center'; 
-    if (layout === 'polaroid') ctx.fillText('Just Married', canvas.width / 2, canvas.height - 70);
-    else { ctx.fillText('Just Married', canvas.width / 2, 80); ctx.font = '20px "Times New Roman", serif'; ctx.fillText('Save The Date - Gizmo Studio', canvas.width / 2, canvas.height - 40); }
+    ctx.fillStyle = 'rgba(196,167,125,0.04)'; ctx.font = 'italic 16px Georgia'; for(let y=60; y<canvas.height-60; y+=80) { ctx.fillText("GIZMO & ELEGANCE Wedding Session gizmo & elegance".repeat(4), 40, y); }
 
-    const m = layout.startsWith('strip') ? 8 : 10;
+    ctx.fillStyle = '#b45309'; ctx.font = `italic ${layout.startsWith('strip') ? 45 : 55}px "Times New Roman", serif`; ctx.textAlign = 'center'; 
+    if (layout === 'polaroid') ctx.fillText('Royal Wedding', canvas.width / 2, canvas.height - 70);
+    else { ctx.fillText('Royal Wedding', canvas.width / 2, 85); ctx.font = '22px "Times New Roman", serif'; ctx.fillStyle = '#92400e'; ctx.fillText('FOREVER STARTS NOW', canvas.width / 2, canvas.height - 40); }
+
+    const m = layout.startsWith('strip') ? 10 : 12;
     for (let i = 0; i < images.length; i++) {
       const cx = coords[i].x, cy = coords[i].y;
-      ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 10; ctx.fillStyle = '#fff'; ctx.fillRect(cx - m, cy - m, imgW + m*2, imgH + m*2); ctx.shadowColor = 'transparent';
-      ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.strokeRect(cx - m/2, cy - m/2, imgW + m, imgH + m);
+      ctx.shadowColor = 'rgba(0,0,0,0.06)'; ctx.shadowBlur = 10; ctx.fillStyle = '#fff'; ctx.fillRect(cx - m, cy - m, imgW + m*2, imgH + m*2); ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = '#c4a77d'; ctx.lineWidth = 1; ctx.strokeRect(cx - m + 2, cy - m + 2, imgW + m*2 - 4, imgH + m*2 - 4);
       drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 0, filterCss, smoothness);
+      
+      drawFlowerCharm(ctx, cx + imgW, cy + imgH, 20, '#fca5a5'); 
+      if (i % 2 === 0) drawHeartCharm(ctx, cx - 10, cy + 10, 20, '#d4a373'); 
     }
   };
 
+  // 4. Neon Theme -> Sửa lỗi isPremium, thêm sparkle
   const drawNeonTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string) => {
-    ctx.fillStyle = '#09090b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.shadowColor = '#e879f9'; ctx.shadowBlur = 20; ctx.fillStyle = '#fdf4ff'; 
-    ctx.font = `bold ${layout.startsWith('strip') ? 45 : 60}px Courier New`; ctx.textAlign = 'center'; 
-    if (layout === 'polaroid') ctx.fillText('NEON VIBES', canvas.width / 2, canvas.height - 70);
-    else ctx.fillText('NEON VIBES', canvas.width / 2, 80);
-    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = '#050509'; ctx.fillRect(0, 0, canvas.width, canvas.height); 
+    for(let i=0; i<20; i++) { drawSparkleCharm(ctx, Math.random()*canvas.width, Math.random()*canvas.height, 6, i%2? '#22d3ee':'#e879f9'); }
+
+    const neonColor = isPremium ? '#e879f9' : '#22d3ee'; // ĐÃ FIX LỖI TYPO
+    ctx.shadowColor = neonColor; ctx.shadowBlur = 20; ctx.fillStyle = '#fff'; 
+    ctx.font = `bold ${layout.startsWith('strip') ? 45 : 60}px "Courier New"`; ctx.textAlign = 'center'; 
+    if (layout === 'polaroid') ctx.fillText('NEON PARTY', canvas.width / 2, canvas.height - 70);
+    else ctx.fillText('NEON PARTY', canvas.width / 2, 85); ctx.shadowColor = 'transparent';
 
     for (let i = 0; i < images.length; i++) {
       const cx = coords[i].x, cy = coords[i].y;
-      ctx.shadowColor = i % 2 === 0 ? '#22d3ee' : '#e879f9'; ctx.shadowBlur = layout.startsWith('strip') ? 10 : 25; 
-      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6; ctx.strokeRect(cx, cy, imgW, imgH); ctx.shadowColor = 'transparent';
+      ctx.shadowColor = i % 2 === 0 ? '#22d3ee' : '#e879f9'; ctx.shadowBlur = 25; 
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 7; ctx.strokeRect(cx, cy, imgW, imgH); ctx.shadowColor = 'transparent';
       drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 0, filterCss, smoothness);
+      
+      drawSparkleCharm(ctx, cx + 15, cy - 10, 18, '#ffffff'); 
+      drawSparkleCharm(ctx, cx + imgW - 10, cy + imgH + 5, 20, i % 2 === 0 ? '#e879f9' : '#22d3ee'); 
     }
   };
 
+  // 5. Retro Theme -> Thêm Sao cổ điển
   const drawRetroTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string) => {
-    ctx.fillStyle = '#d4c5b0'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = 'rgba(0,0,0,0.05)'; for(let i=0; i<canvas.width; i+=4) { for(let j=0; j<canvas.height; j+=4) { if(Math.random() > 0.5) ctx.fillRect(i, j, 1, 1); } }
+    ctx.fillStyle = '#d4c5b0'; ctx.fillRect(0, 0, canvas.width, canvas.height); 
+    ctx.fillStyle = 'rgba(139,69,19,0.05)'; for(let i=0; i<1000; i++) { ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1, 1); } 
     
-    // Tối ưu viền phim đen sao cho nó chạm sát nhau tạo thành 1 dải liên tục
     const m = layout.startsWith('strip') ? 10 : 20;
     for (let i = 0; i < images.length; i++) {
       const cx = coords[i].x, cy = coords[i].y;
       ctx.fillStyle = '#1c1917'; ctx.fillRect(cx - m, cy - m, imgW + m*2, imgH + m*2);
       ctx.fillStyle = '#d4c5b0'; 
-      // Đục lỗ phim thông minh
-      if (layout === 'film') { // Khung nằm ngang -> lỗ ở trên và dưới
-        for(let holeX = cx - 10; holeX < cx + imgW + 20; holeX += 25) { ctx.fillRect(holeX, cy - m/2 - 6, 12, 8); ctx.fillRect(holeX, cy + imgH + m/2 - 2, 12, 8); }
-      } else { // Khung nằm dọc -> lỗ ở 2 bên trái phải
-        for(let holeY = cy - 10; holeY < cy + imgH + 20; holeY += 25) { ctx.fillRect(cx - m/2 - 6, holeY, 8, 12); ctx.fillRect(cx + imgW + m/2 - 2, holeY, 8, 12); }
-      }
-      ctx.save(); const retroFilter = 'sepia(0.6) contrast(1.2)'; ctx.filter = retroFilter + (filterCss ? ' ' + filterCss : '');
+      if (layout === 'film') { for(let holeX = cx - 10; holeX < cx + imgW + 20; holeX += 25) { ctx.fillRect(holeX, cy - m/2 - 6, 12, 8); ctx.fillRect(holeX, cy + imgH + m/2 - 2, 12, 8); } }
+      else { for(let holeY = cy - 10; holeY < cy + imgH + 20; holeY += 25) { ctx.fillRect(cx - m/2 - 6, holeY, 8, 12); ctx.fillRect(cx + imgW + m/2 - 2, holeY, 8, 12); } }
+      ctx.save(); const retroFilter = 'sepia(0.6) contrast(1.1) brightness(0.95)'; ctx.filter = retroFilter + (filterCss ? ' ' + filterCss : '');
       drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 0, '', smoothness); 
       ctx.filter = 'none'; ctx.restore();
+      
+      if (i % 2 === 0) drawStarCharm(ctx, cx - 15, cy - 15, 12, '#8b4513'); 
     }
   };
 
-  // ==========================================
-  // ĐÃ KHÔI PHỤC: BỘ KHUNG ĐỘC QUYỀN VNU
-  // ==========================================
+  // 6. Cyberpunk Theme
+  const drawCyberpunkTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string) => {
+    ctx.fillStyle = '#0a001a'; ctx.fillRect(0, 0, canvas.width, canvas.height); 
+    ctx.strokeStyle = 'rgba(236,72,153,0.15)'; ctx.lineWidth = 1; 
+    for (let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+    for (let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+
+    ctx.shadowColor = '#eab308'; ctx.shadowBlur = 15; ctx.fillStyle = '#fff'; 
+    ctx.font = `bold ${layout.startsWith('strip') ? 45 : 60}px "Courier New"`; ctx.textAlign = 'center'; 
+    if (layout === 'polaroid') ctx.fillText('CYBER CITY', canvas.width / 2, canvas.height - 70);
+    else ctx.fillText('GIZMO-PUNK 2077', canvas.width / 2, 85); ctx.shadowColor = 'transparent';
+
+    for (let i = 0; i < images.length; i++) {
+      const cx = coords[i].x, cy = coords[i].y;
+      ctx.shadowColor = i % 2 === 0 ? '#22d3ee' : '#ec4899'; ctx.shadowBlur = 25; 
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6; ctx.strokeRect(cx, cy, imgW, imgH); ctx.shadowColor = 'transparent';
+      drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 0, filterCss, smoothness);
+      
+      drawSparkleCharm(ctx, cx + imgW - 15, cy + 10, 20, i % 2 === 0 ? '#ec4899' : '#22d3ee'); 
+    }
+  };
+
+  // 7. VNU Theme -> CHUẨN MỰC TRUYỀN THỐNG: Màu Xanh thẫm tự hào, trang trọng, không có nơ/hoa.
   const drawVNUTheme = async (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string) => {
-    // 1. Phủ màu Xanh VNU chuẩn
+    // Phủ màu Xanh VNU chuẩn mực
     const VNU_GREEN = '#0f5132';
     ctx.fillStyle = VNU_GREEN; ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // 2. Vẽ họa tiết charm chìm (Ngôi sao và sách)
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    for(let i=0; i<20; i++) {
-       ctx.beginPath(); ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*15 + 5, 0, Math.PI*2); ctx.fill();
-    }
+    // Pattern hình học tinh tế, hiện đại, không dùng charm hoa lá
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+    for(let i=0; i<canvas.width; i+=60) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+    for(let i=0; i<canvas.height; i+=60) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
 
-    // 3. Xử lý khoảng cách và Chữ tùy theo Layout
-    const m = layout.startsWith('strip') ? 8 : 15;
+    // Chữ "#TuHaoSinhVienVNU" nổi bật
     ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10; ctx.fillStyle = '#ffffff'; 
-    ctx.font = `bold ${layout.startsWith('strip') ? 45 : 60}px Arial`; ctx.textAlign = 'center'; 
+    ctx.font = `bold ${layout.startsWith('strip') ? 40 : 55}px Arial`; ctx.textAlign = 'center'; 
     if (layout === 'polaroid') ctx.fillText('#TuHaoSinhVienVNU', canvas.width / 2, canvas.height - 70);
     else ctx.fillText('#TuHaoSinhVienVNU', canvas.width / 2, 80);
     ctx.shadowColor = 'transparent';
 
-    // 4. Vẽ Khung viền và Ảnh
+    const m = layout.startsWith('strip') ? 8 : 15;
     for (let i = 0; i < images.length; i++) {
       const cx = coords[i].x, cy = coords[i].y;
       
-      // Viền trắng dày đổ bóng Xanh nhạt
-      ctx.shadowColor = '#22c55e'; ctx.shadowBlur = 15; ctx.fillStyle = '#ffffff'; 
-      ctx.beginPath(); ctx.roundRect(cx - m, cy - m, imgW + m*2, imgH + m*2, 10); ctx.fill(); ctx.shadowColor = 'transparent';
+      // Khung viền đơn giản, mạnh mẽ
+      ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 15; ctx.fillStyle = '#ffffff'; 
+      ctx.beginPath(); ctx.roundRect(cx - m, cy - m, imgW + m*2, imgH + m*2, 8); ctx.fill(); ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2; ctx.stroke();
       
-      // Viền xanh lá mỏng sát viền ảnh
-      ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 3; ctx.stroke();
-      drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 6, filterCss, smoothness);
+      drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 4, filterCss, smoothness);
     }
 
-    // 5. Tải và Vẽ Logo VNU
+    // Tải và Vẽ Logo VNU cực kỳ sắc nét
     try {
-      const vnuLogo = await loadImage('/vnu-logo.png'); // Sẽ lấy từ file bạn vừa ném vào thư mục public
+      const vnuLogo = await loadImage('/vnu-logo.png');
       const logoSize = layout.startsWith('strip') ? 80 : 120;
-      
-      // Đặt Logo ở góc dưới cùng bên phải
       const logoX = canvas.width - logoSize - 20;
       const logoY = canvas.height - logoSize - 20;
       
-      // Vẽ một vòng tròn trắng lót dưới Logo cho nổi bật
-      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(logoX + logoSize/2, logoY + logoSize/2, logoSize/2 + 5, 0, Math.PI*2); ctx.fill();
+      // Vòng tròn lót logo sắc nét
+      ctx.fillStyle = '#ffffff'; ctx.shadowColor = 'rgba(0,0,0,0.2)'; ctx.shadowBlur = 10; 
+      ctx.beginPath(); ctx.arc(logoX + logoSize/2, logoY + logoSize/2, logoSize/2 + 5, 0, Math.PI*2); ctx.fill(); 
+      ctx.shadowColor = 'transparent';
       ctx.drawImage(vnuLogo, logoX, logoY, logoSize, logoSize);
     } catch (e) {
       console.log("Chưa thấy file vnu-logo.png trong thư mục public");
