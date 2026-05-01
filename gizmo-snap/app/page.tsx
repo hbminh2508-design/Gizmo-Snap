@@ -4,12 +4,13 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { supabase } from "@/utils/supabase";
 import { QRCodeCanvas } from "qrcode.react";
 import Link from "next/link";
-import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Crown, Bug, LayoutGrid, Palette, ArrowRight, Lock, Wand2 } from "lucide-react";
+// Đã thêm GraduationCap cho logo VNU
+import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Crown, Bug, LayoutGrid, Palette, ArrowRight, Lock, Wand2, GraduationCap } from "lucide-react";
 import FrameComposer from "@/components/FrameComposer";
 
 type FrameLayout = '2x2' | 'strip3' | 'strip4' | 'polaroid' | 'film' | 'grid6';
-// ĐÃ FIX: Danh sách 21 Theme Siêu Phẩm
-type FrameTheme = 'dark' | 'pink' | 'hello_kitty' | 'minimal' | 'ocean' | 'sunset' | 'pastel' | 'nature' | 'y2k' | 'wedding' | 'neon' | 'retro' | 'spiderman' | '30_4' | 'vietnam' | 'golden' | 'cyberpunk' | 'newspaper' | 'kawaii' | 'gothic' | 'holo';
+// ĐÃ FIX: Danh sách 22 Theme (Có cả vnu_theme)
+type FrameTheme = 'dark' | 'pink' | 'hello_kitty' | 'minimal' | 'ocean' | 'sunset' | 'pastel' | 'nature' | 'y2k' | 'wedding' | 'neon' | 'retro' | 'spiderman' | '30_4' | 'vietnam' | 'golden' | 'cyberpunk' | 'newspaper' | 'kawaii' | 'gothic' | 'holo' | 'vnu_theme';
 type ImageFilter = 'none' | 'sepia' | 'grayscale' | 'vintage' | 'brighten' | 'cool';
 
 export default function Photobooth() {
@@ -38,7 +39,8 @@ export default function Photobooth() {
   const [selectedFilter, setSelectedFilter] = useState<ImageFilter>('none');
   const [skinSmoothness, setSkinSmoothness] = useState<number>(50);
 
-  const isPremium = profile?.plan === 'pro' || profile?.plan === 'limitless' || profile?.plan === 'exclusive';
+  // Gói 'vnu' được tính là Premium
+  const isPremium = ['pro', 'limitless', 'exclusive', 'vnu'].includes(profile?.plan);
   const maxPhotosMap: Record<FrameLayout, number> = { '2x2': 4, 'strip3': 3, 'strip4': 4, 'polaroid': 1, 'film': 3, 'grid6': 6 };
   const maxPhotos = maxPhotosMap[layout];
 
@@ -46,25 +48,35 @@ export default function Photobooth() {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) fetchProfile(session.user);
     };
     getSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) fetchProfile(session.user);
       else setProfile(null);
     });
     return () => authListener.subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase.rpc('check_and_reset_shoots', { user_id: userId });
-    if (data) setProfile(data);
-    else {
-      const { data: fallback } = await supabase.from("profiles").select("*").eq("id", userId).single();
-      if (fallback) setProfile(fallback);
+  // ĐÃ NÂNG CẤP: Truyền nguyên object user vào để check email VNU
+  const fetchProfile = async (userData: any) => {
+    let { data } = await supabase.rpc('check_and_reset_shoots', { user_id: userData.id });
+    if (!data) {
+      const { data: fallback } = await supabase.from("profiles").select("*").eq("id", userData.id).single();
+      data = fallback;
     }
+
+    // --- LOGIC HACK GROWTH: TỰ ĐỘNG CẤP VIP CHO SINH VIÊN VNU ---
+    if (userData.email?.endsWith('@vnu.edu.vn') && data?.plan !== 'vnu' && data?.plan !== 'limitless' && data?.plan !== 'exclusive') {
+      await supabase.from('profiles').update({ plan: 'vnu', daily_shoots: 50 }).eq('id', userData.id);
+      data.plan = 'vnu';
+      data.daily_shoots = 50;
+      alert("🎉 TING TING! Hệ thống nhận diện Email VNU. Tặng bạn gói Đặc quyền: 50 lượt chụp/ngày & Toàn bộ Khung VIP!");
+    }
+
+    setProfile(data);
   };
 
   const loginWithGoogle = async () => { await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin } }); };
@@ -81,14 +93,14 @@ export default function Photobooth() {
 
   useEffect(() => {
     const autoDecrement = async () => {
-      if (photos.length === maxPhotos && !hasDecremented && user && !isPremium) {
+      if (photos.length === maxPhotos && !hasDecremented && user && !['limitless', 'exclusive'].includes(profile?.plan)) {
         setHasDecremented(true);
         setProfile((prev: any) => ({ ...prev, daily_shoots: prev.daily_shoots - 1 }));
         await supabase.rpc('decrement_daily_shoots', { user_id: user.id });
       }
     };
     autoDecrement();
-  }, [photos.length, hasDecremented, user, profile, maxPhotos, isPremium]);
+  }, [photos.length, hasDecremented, user, profile, maxPhotos]);
 
   const captureWithFlash = useCallback(async () => {
     setIsFlashing(true);
@@ -138,7 +150,7 @@ export default function Photobooth() {
   }, [photos.length, isShooting, timerInterval, maxPhotos]);
 
   const startAutoShoot = () => {
-    if (user && !isPremium && profile?.daily_shoots <= 0) { alert("Hết lượt chụp!"); return; }
+    if (user && profile?.plan !== 'limitless' && profile?.plan !== 'exclusive' && profile?.daily_shoots <= 0) { alert("Hết lượt chụp!"); return; }
     if (photos.length >= maxPhotos) return;
     setIsShooting(true); setCountdown(timerInterval);
   };
@@ -174,7 +186,7 @@ export default function Photobooth() {
     { id: 'grid6', name: 'Lưới 3x2', desc: '6 ảnh (PRO+)', prem: true },
   ];
   
-  // TỔNG HỢP 21 THEMES SIÊU ĐẸP
+  // TỔNG HỢP 22 THEMES SIÊU ĐẸP
   const themes = [
     // --- 9 THEME MIỄN PHÍ TỐI ƯU ---
     { id: 'minimal', name: 'Minimal White', prem: false, color: 'bg-white border-gray-300 text-gray-800 shadow-md' },
@@ -187,7 +199,8 @@ export default function Photobooth() {
     { id: 'y2k', name: 'Y2K Cyber', prem: false, color: 'bg-zinc-200 border-zinc-400 text-zinc-900' },
     { id: 'hello_kitty', name: 'Hello Kitty', prem: false, color: 'bg-pink-200 border-pink-500 text-pink-800 shadow-[0_0_10px_#f472b6]' },
 
-    // --- 12 THEME VIP ĐẲNG CẤP ---
+    // --- 13 THEME VIP ĐẲNG CẤP (Bao gồm VNU) ---
+    { id: 'vnu_theme', name: '#ToiLaSinhVienVNU', prem: true, color: 'bg-[#0f5132] border-[#22c55e] text-white shadow-[0_0_15px_#22c55e]' },
     { id: 'golden', name: 'Golden Hour', prem: true, color: 'bg-yellow-900 border-yellow-400 text-yellow-200 shadow-[0_0_15px_#facc15]' },
     { id: 'wedding', name: 'Royal Wedding', prem: true, color: 'bg-slate-50 border-amber-300 text-amber-700 shadow-[0_0_15px_#fcd34d]' },
     { id: 'holo', name: 'Holographic', prem: true, color: 'bg-gradient-to-r from-pink-300 via-purple-300 to-cyan-300 border-white text-white' },
@@ -238,8 +251,16 @@ export default function Photobooth() {
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-gray-200">{user.email}</p>
               <div className="flex items-center justify-end gap-2 mt-1">
-                <span className="text-[10px] bg-gradient-to-r from-pink-500 to-violet-500 text-white px-2 py-0.5 rounded-full uppercase font-bold tracking-wider shadow-lg">{profile?.plan || "free"}</span>
-                {!isPremium && <span className="text-[10px] bg-white/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-bold">Còn: {profile?.daily_shoots || 0} lượt</span>}
+                {/* HIỂN THỊ BADGE VNU */}
+                {profile?.plan === 'vnu' ? (
+                  <span className="flex items-center gap-1 text-[10px] bg-gradient-to-r from-green-600 to-emerald-500 text-white px-2 py-0.5 rounded-full uppercase font-bold tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.5)]"><GraduationCap size={12}/> VNU VIP</span>
+                ) : (
+                  <span className="text-[10px] bg-gradient-to-r from-pink-500 to-violet-500 text-white px-2 py-0.5 rounded-full uppercase font-bold tracking-wider shadow-lg">{profile?.plan || "free"}</span>
+                )}
+                
+                {profile?.plan !== 'limitless' && profile?.plan !== 'exclusive' && (
+                  <span className="text-[10px] bg-white/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-bold ml-2">Còn: {profile?.daily_shoots || 0} lượt</span>
+                )}
               </div>
             </div>
             <img src={user.user_metadata?.avatar_url || "https://www.gravatar.com/avatar/?d=mp"} className="w-11 h-11 rounded-full border-2 border-pink-500 shadow-lg object-cover" alt="avatar" />
@@ -270,8 +291,7 @@ export default function Photobooth() {
             </div>
 
             <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200"><Palette size={20} className="text-violet-400"/> Chọn Phong Cách Độc Quyền (21 Themes)</h3>
-              {/* Phân tách rõ ràng giữa Free và VIP */}
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200"><Palette size={20} className="text-violet-400"/> Chọn Phong Cách Độc Quyền</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {themes.map((item) => (
                   <button key={item.id} onClick={() => handleSelect('theme', item.id, item.prem)} className={`p-3 rounded-2xl border-2 transition-all flex items-center justify-between font-bold text-sm ${item.color} ${theme === item.id ? 'ring-4 ring-white ring-offset-2 ring-offset-slate-900 scale-105 z-10' : 'opacity-80 hover:opacity-100'}`}>
@@ -289,7 +309,7 @@ export default function Photobooth() {
           <div className="w-full lg:w-[400px] bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center relative">
              <h3 className="text-lg font-semibold mb-6 text-gray-300">Xem trước CSS (Bản nháp)</h3>
              <div className={`transition-all duration-500 rounded-xl p-4 flex flex-col items-center shadow-2xl ${themes.find(t => t.id === theme)?.color} w-[260px] h-[340px] max-h-[400px]`}>
-                <h4 className="font-black text-xl mb-4 text-center tracking-wider">{theme.toUpperCase()}</h4>
+                <h4 className="font-black text-xl mb-4 text-center tracking-wider">{themes.find(t => t.id === theme)?.name.toUpperCase()}</h4>
                 <div className={`grid gap-2 w-full ${layout === '2x2' || layout === 'grid6' ? 'grid-cols-2' : layout === 'film' ? 'grid-cols-3' : 'grid-cols-1'}`}>
                    {[...Array(maxPhotosMap[layout])].map((_, i) => (
                      <div key={i} className="bg-black/50 w-full aspect-video rounded border border-white/30 flex items-center justify-center">

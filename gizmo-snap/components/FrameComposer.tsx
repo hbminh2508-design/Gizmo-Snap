@@ -128,12 +128,14 @@ export default function FrameComposer({
 
       // TÁCH LUỒNG: THEME CUSTOM & THEME CẤU HÌNH ĐỘNG
       // Truyền thêm param `layout` để các hàm biết đường tối ưu lề và chữ
-      if (['30_4', 'hello_kitty', 'wedding', 'neon', 'retro'].includes(theme)) {
+      // ĐÃ KHÔI PHỤC: Nhận diện 'vnu_theme'
+      if (['30_4', 'hello_kitty', 'wedding', 'neon', 'retro', 'vnu_theme'].includes(theme)) {
          if (theme === '30_4') draw30_4Theme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'hello_kitty') drawHelloKittyTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'wedding') drawWeddingTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'neon') drawNeonTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'retro') drawRetroTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
+         if (theme === 'vnu_theme') await drawVNUTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
       } else {
          const config = THEME_CONFIGS[theme] || THEME_CONFIGS['minimal'];
          drawConfigTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, config, layout);
@@ -353,6 +355,58 @@ export default function FrameComposer({
       ctx.save(); const retroFilter = 'sepia(0.6) contrast(1.2)'; ctx.filter = retroFilter + (filterCss ? ' ' + filterCss : '');
       drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 0, '', smoothness); 
       ctx.filter = 'none'; ctx.restore();
+    }
+  };
+
+  // ==========================================
+  // ĐÃ KHÔI PHỤC: BỘ KHUNG ĐỘC QUYỀN VNU
+  // ==========================================
+  const drawVNUTheme = async (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string) => {
+    // 1. Phủ màu Xanh VNU chuẩn
+    const VNU_GREEN = '#0f5132';
+    ctx.fillStyle = VNU_GREEN; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 2. Vẽ họa tiết charm chìm (Ngôi sao và sách)
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    for(let i=0; i<20; i++) {
+       ctx.beginPath(); ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*15 + 5, 0, Math.PI*2); ctx.fill();
+    }
+
+    // 3. Xử lý khoảng cách và Chữ tùy theo Layout
+    const m = layout.startsWith('strip') ? 8 : 15;
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10; ctx.fillStyle = '#ffffff'; 
+    ctx.font = `bold ${layout.startsWith('strip') ? 45 : 60}px Arial`; ctx.textAlign = 'center'; 
+    if (layout === 'polaroid') ctx.fillText('#TuHaoSinhVienVNU', canvas.width / 2, canvas.height - 70);
+    else ctx.fillText('#TuHaoSinhVienVNU', canvas.width / 2, 80);
+    ctx.shadowColor = 'transparent';
+
+    // 4. Vẽ Khung viền và Ảnh
+    for (let i = 0; i < images.length; i++) {
+      const cx = coords[i].x, cy = coords[i].y;
+      
+      // Viền trắng dày đổ bóng Xanh nhạt
+      ctx.shadowColor = '#22c55e'; ctx.shadowBlur = 15; ctx.fillStyle = '#ffffff'; 
+      ctx.beginPath(); ctx.roundRect(cx - m, cy - m, imgW + m*2, imgH + m*2, 10); ctx.fill(); ctx.shadowColor = 'transparent';
+      
+      // Viền xanh lá mỏng sát viền ảnh
+      ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 3; ctx.stroke();
+      drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 6, filterCss, smoothness);
+    }
+
+    // 5. Tải và Vẽ Logo VNU
+    try {
+      const vnuLogo = await loadImage('/vnu-logo.png'); // Sẽ lấy từ file bạn vừa ném vào thư mục public
+      const logoSize = layout.startsWith('strip') ? 80 : 120;
+      
+      // Đặt Logo ở góc dưới cùng bên phải
+      const logoX = canvas.width - logoSize - 20;
+      const logoY = canvas.height - logoSize - 20;
+      
+      // Vẽ một vòng tròn trắng lót dưới Logo cho nổi bật
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(logoX + logoSize/2, logoY + logoSize/2, logoSize/2 + 5, 0, Math.PI*2); ctx.fill();
+      ctx.drawImage(vnuLogo, logoX, logoY, logoSize, logoSize);
+    } catch (e) {
+      console.log("Chưa thấy file vnu-logo.png trong thư mục public");
     }
   };
 
