@@ -5,7 +5,8 @@ import { useEffect, useRef } from 'react';
 interface FrameComposerProps {
   photos: string[];
   layout: '2x2' | 'strip3' | 'strip4' | 'polaroid' | 'film' | 'grid6';
-  theme: 'dark' | 'pink' | 'cyberpunk' | 'spiderman' | '30_4' | 'vietnam' | 'hello_kitty';
+  // ĐÃ THÊM 3 THEME VIP VÀO ĐÂY
+  theme: 'dark' | 'pink' | 'cyberpunk' | 'spiderman' | '30_4' | 'vietnam' | 'hello_kitty' | 'wedding' | 'neon' | 'retro';
   isPremium: boolean;
   onGenerateSuccess: (base64: string) => void;
   onGenerateError: (error: any) => void;
@@ -111,11 +112,17 @@ export default function FrameComposer({
       // Tải tất cả ảnh trước khi vẽ
       const loadedImages = await Promise.all(photos.map(src => loadImage(src)));
 
-      // 2. Chạy thuật toán vẽ theo Theme
+      // 2. Chạy thuật toán vẽ theo Theme (ĐÃ CẬP NHẬT 3 KHUNG VIP)
       if (theme === '30_4') {
         draw30_4Theme(ctx, canvas, loadedImages, coords, imgW, imgH);
       } else if (theme === 'hello_kitty') {
         drawHelloKittyTheme(ctx, canvas, loadedImages, coords, imgW, imgH);
+      } else if (theme === 'wedding') {
+        drawWeddingTheme(ctx, canvas, loadedImages, coords, imgW, imgH);
+      } else if (theme === 'neon') {
+        drawNeonTheme(ctx, canvas, loadedImages, coords, imgW, imgH);
+      } else if (theme === 'retro') {
+        drawRetroTheme(ctx, canvas, loadedImages, coords, imgW, imgH);
       } else {
         drawBasicTheme(ctx, canvas, loadedImages, coords, imgW, imgH);
       }
@@ -137,16 +144,15 @@ export default function FrameComposer({
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate((angleDeg * Math.PI) / 180);
-    ctx.scale(1.5, 1.5); // Phóng to kẹp giấy
+    ctx.scale(1.5, 1.5);
 
-    // Đổ bóng kẹp giấy
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 4;
     ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 2;
 
     const path = new Path2D("M28 29.3C28 35.8 22.8 41 16.3 41 C9.8 41 4.5 35.8 4.5 29.3L4.5 10C4.5 5.9 7.9 2.5 12 2.5 C16.1 2.5 19.5 5.9 19.5 10L19.5 27.5C19.5 29.4 17.9 31 16 31 C14.1 31 12.5 29.4 12.5 27.5L12.5 11L10 11L10 27.5C10 30.8 12.7 33.5 16 33.5 C19.3 33.5 22 30.8 22 27.5L22 10C22 4.5 17.5 0 12 0 C6.5 0 2 4.5 2 10L2 29.3C2 37.1 8.4 43.5 16.3 43.5 C24.1 43.5 30.5 37.1 30.5 29.3L30.5 11L28 11L28 29.3Z");
-    ctx.fillStyle = '#cbd5e1'; // Màu bạc kim loại
+    ctx.fillStyle = '#cbd5e1'; 
     ctx.fill(path);
     ctx.strokeStyle = '#64748b';
     ctx.lineWidth = 1;
@@ -174,7 +180,6 @@ export default function FrameComposer({
     ctx.restore();
   };
 
-  // Vẽ tem thư với lỗ đục
   const drawStamp = (ctx: CanvasRenderingContext2D, x: number, y: number, angleDeg: number, bgThemeColor: string) => {
     ctx.save();
     ctx.translate(x, y);
@@ -182,14 +187,12 @@ export default function FrameComposer({
     
     const w = 140, h = 180;
     
-    // Nền trắng tem có bóng
     ctx.shadowColor = 'rgba(0,0,0,0.4)';
     ctx.shadowBlur = 10;
     ctx.fillStyle = '#fdfbf7';
     ctx.fillRect(0, 0, w, h);
-    ctx.shadowColor = 'transparent'; // Tắt shadow để vẽ chi tiết trong
+    ctx.shadowColor = 'transparent'; 
 
-    // Đục lỗ viền (Vẽ đè hình tròn màu nền lên rìa tem)
     ctx.fillStyle = bgThemeColor;
     const r = 6, step = 20;
     for(let i=step; i<w; i+=step) {
@@ -201,19 +204,16 @@ export default function FrameComposer({
       ctx.beginPath(); ctx.arc(w, i, r, 0, Math.PI*2); ctx.fill();
     }
 
-    // Viền trong đỏ
     ctx.strokeStyle = '#dc2626';
     ctx.lineWidth = 1;
     ctx.strokeRect(15, 15, w-30, h-30);
 
-    // Con dấu mờ
     ctx.beginPath();
     ctx.arc(w/2 - 30, h/2 - 30, 30, 0, Math.PI*2);
     ctx.strokeStyle = 'rgba(220, 38, 38, 0.4)';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Hình ngôi sao
     ctx.save();
     ctx.translate(w/2, 50);
     ctx.scale(0.4, 0.4);
@@ -222,7 +222,6 @@ export default function FrameComposer({
     ctx.fill(star);
     ctx.restore();
 
-    // Chữ Bưu Chính
     ctx.fillStyle = '#333';
     ctx.font = 'bold 16px Courier New';
     ctx.textAlign = 'center';
@@ -233,18 +232,14 @@ export default function FrameComposer({
     ctx.restore();
   };
 
-
   // ==========================================
-  // THEME 30/4 (SIÊU CHI TIẾT - CHUẨN MẪU)
+  // THEME 30/4 
   // ==========================================
   const draw30_4Theme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number) => {
     const RED_BG = '#991b1b';
-    
-    // Nền
     ctx.fillStyle = RED_BG;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Tiêu đề
     ctx.shadowColor = 'rgba(0,0,0,0.6)';
     ctx.shadowBlur = 10;
     ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 3;
@@ -252,9 +247,8 @@ export default function FrameComposer({
     ctx.font = 'bold 55px Courier New';
     ctx.textAlign = 'center';
     ctx.fillText('KHUNG HÌNH KỶ NIỆM 30/4', canvas.width / 2, 80);
-    ctx.shadowColor = 'transparent'; // Tắt bóng
+    ctx.shadowColor = 'transparent'; 
 
-    // Sao vàng góc phải
     ctx.fillStyle = '#facc15';
     ctx.font = '70px Arial';
     ctx.fillText('★', canvas.width - 80, 80);
@@ -264,7 +258,6 @@ export default function FrameComposer({
       const polW = imgW + 60, polH = imgH + 150;
       const polX = cx - 30, polY = cy - 30;
 
-      // Vẽ nền trắng Polaroid
       ctx.shadowColor = 'rgba(0,0,0,0.5)';
       ctx.shadowBlur = 20;
       ctx.fillStyle = '#f8fafc';
@@ -273,14 +266,11 @@ export default function FrameComposer({
       ctx.fill();
       ctx.shadowColor = 'transparent';
 
-      // Khung viền đen
       ctx.fillStyle = '#000';
       ctx.fillRect(cx - 5, cy - 5, imgW + 10, imgH + 10);
 
-      // VẼ ẢNH NGƯỜI DÙNG VÀO CHÍNH GIỮA (Chống méo)
       drawImageCover(ctx, images[i], cx, cy, imgW, imgH);
 
-      // Chữ dập nổi dưới khung Polaroid
       ctx.textAlign = 'center';
       const textX = cx + imgW/2, textY = cy + imgH + 50;
 
@@ -297,7 +287,6 @@ export default function FrameComposer({
         ctx.fillText('GIẢI PHÓNG MIỀN NAM 1975', textX, textY);
       }
 
-      // Phụ kiện vector: Kẹp giấy & Tem
       if (i === 0) drawStamp(ctx, cx - 60, cy + 20, -10, RED_BG);
       if (i === 1) {
         drawStamp(ctx, cx + imgW - 60, cy + imgH, 15, RED_BG);
@@ -308,22 +297,18 @@ export default function FrameComposer({
     }
   };
 
-
   // ==========================================
-  // THEME HELLO KITTY (NƠ BO GÓC CHUẨN XÁC)
+  // THEME HELLO KITTY 
   // ==========================================
   const drawHelloKittyTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number) => {
-    // Nền hồng nhạt
     ctx.fillStyle = '#fce7f3';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Kẻ caro
     ctx.strokeStyle = '#fbcfe8';
     ctx.lineWidth = 2;
     for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
     for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
 
-    // Tiêu đề
     ctx.shadowColor = '#f9a8d4'; ctx.shadowBlur = 10;
     ctx.fillStyle = '#be185d';
     ctx.font = 'bold 60px Arial';
@@ -334,29 +319,107 @@ export default function FrameComposer({
     for (let i = 0; i < images.length; i++) {
       const cx = coords[i].x, cy = coords[i].y;
       
-      // Viền trắng dày bo tròn
       ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 15;
       ctx.fillStyle = '#ffffff';
       ctx.beginPath(); ctx.roundRect(cx - 15, cy - 15, imgW + 30, imgH + 30, 20); ctx.fill();
       ctx.shadowColor = 'transparent';
 
-      // Viền hồng đè lên
       ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 6;
       ctx.beginPath(); ctx.roundRect(cx - 15, cy - 15, imgW + 30, imgH + 30, 20); ctx.stroke();
 
-      // Vẽ ảnh người dùng bo góc 10px (CHỐNG MÉO BẰNG OBJECT COVER)
       drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 10);
 
-      // Chữ Hello Kitty dễ thương
       ctx.fillStyle = '#db2777'; ctx.font = 'bold 18px Courier New';
       ctx.fillText('Hello Kitty Signature', cx + imgW/2, cy + imgH + 30);
 
-      // Gắn Nơ Vector
       if (i % 2 === 0) drawKittyBow(ctx, cx - 25, cy - 25, -15);
       else drawKittyBow(ctx, cx + imgW - 40, cy - 25, 15);
     }
   };
 
+  // ==========================================
+  // 3 THEME VIP MỚI
+  // ==========================================
+  const drawWeddingTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number) => {
+    ctx.fillStyle = '#fafaf9'; // Trắng ngà
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Viền Gold hoàng gia
+    ctx.strokeStyle = '#d97706'; ctx.lineWidth = 4;
+    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+    ctx.strokeStyle = '#fcd34d'; ctx.lineWidth = 1;
+    ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
+
+    ctx.fillStyle = '#b45309'; ctx.font = 'italic 50px "Times New Roman", serif';
+    ctx.textAlign = 'center'; ctx.fillText('Just Married', canvas.width / 2, 80);
+
+    for (let i = 0; i < images.length; i++) {
+      const cx = coords[i].x, cy = coords[i].y;
+      ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 10;
+      ctx.fillStyle = '#fff'; ctx.fillRect(cx - 10, cy - 10, imgW + 20, imgH + 20);
+      ctx.shadowColor = 'transparent';
+      
+      // Khung vàng chỉ mảnh
+      ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.strokeRect(cx - 5, cy - 5, imgW + 10, imgH + 10);
+      drawImageCover(ctx, images[i], cx, cy, imgW, imgH);
+    }
+    ctx.fillStyle = '#92400e'; ctx.font = '20px "Times New Roman", serif';
+    ctx.fillText('Save The Date - Gizmo Studio', canvas.width / 2, canvas.height - 40);
+  };
+
+  const drawNeonTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number) => {
+    ctx.fillStyle = '#09090b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.shadowColor = '#e879f9'; ctx.shadowBlur = 20;
+    ctx.fillStyle = '#fdf4ff'; ctx.font = 'bold 60px Courier New';
+    ctx.textAlign = 'center'; ctx.fillText('NEON VIBES', canvas.width / 2, 80);
+    ctx.shadowColor = 'transparent';
+
+    for (let i = 0; i < images.length; i++) {
+      const cx = coords[i].x, cy = coords[i].y;
+      
+      // Vẽ viền phát sáng (Cyan & Magenta xen kẽ)
+      ctx.shadowColor = i % 2 === 0 ? '#22d3ee' : '#e879f9';
+      ctx.shadowBlur = 25;
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 8;
+      ctx.strokeRect(cx, cy, imgW, imgH);
+      ctx.shadowColor = 'transparent';
+
+      drawImageCover(ctx, images[i], cx, cy, imgW, imgH);
+    }
+  };
+
+  const drawRetroTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number) => {
+    ctx.fillStyle = '#d4c5b0'; // Màu giấy ố vàng
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Filter hạt nhiễu (Film Grain) giả lập
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    for(let i=0; i<canvas.width; i+=4) {
+      for(let j=0; j<canvas.height; j+=4) {
+        if(Math.random() > 0.5) ctx.fillRect(i, j, 1, 1);
+      }
+    }
+
+    for (let i = 0; i < images.length; i++) {
+      const cx = coords[i].x, cy = coords[i].y;
+      
+      // Khung đen cuộn phim
+      ctx.fillStyle = '#1c1917';
+      ctx.fillRect(cx - 20, cy - 20, imgW + 40, imgH + 40);
+      
+      // Đục lỗ cuộn phim (Trái & Phải)
+      ctx.fillStyle = '#d4c5b0';
+      for(let holeY = cy - 10; holeY < cy + imgH + 20; holeY += 25) {
+        ctx.fillRect(cx - 15, holeY, 8, 12);
+        ctx.fillRect(cx + imgW + 7, holeY, 8, 12);
+      }
+
+      ctx.filter = 'sepia(0.6) contrast(1.2)'; // Áp màu hoài cổ lên ảnh
+      drawImageCover(ctx, images[i], cx, cy, imgW, imgH);
+      ctx.filter = 'none'; // Tắt filter để không ám sang phần khác
+    }
+  };
 
   // ==========================================
   // THEME CƠ BẢN & VIỆT NAM & SPIDERMAN
@@ -378,12 +441,10 @@ export default function FrameComposer({
     ctx.fillText(titleText, canvas.width / 2, 80);
 
     for (let i = 0; i < images.length; i++) {
-      // Viền ảnh
       ctx.lineWidth = 10;
       ctx.strokeStyle = borderColor;
       ctx.strokeRect(coords[i].x, coords[i].y, imgW, imgH);
       
-      // Vẽ ảnh chuẩn chống méo
       drawImageCover(ctx, images[i], coords[i].x, coords[i].y, imgW, imgH);
     }
   };

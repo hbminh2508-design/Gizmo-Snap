@@ -187,10 +187,13 @@ export default function Photobooth() {
     { id: 'dark', name: 'Dark Classic', prem: false, color: 'bg-slate-900 border-gray-600' },
     { id: 'pink', name: 'Pinky Cute', prem: false, color: 'bg-pink-100 border-pink-400 text-pink-900' },
     { id: 'hello_kitty', name: 'Hello Kitty', prem: false, color: 'bg-pink-200 border-pink-500 text-pink-800 shadow-[0_0_10px_#f472b6]' },
-    { id: 'cyberpunk', name: 'Cyberpunk', prem: true, color: 'bg-black border-green-500 text-green-400 shadow-[0_0_10px_#22c55e]' },
-    { id: 'spiderman', name: 'Spider-Verse', prem: true, color: 'bg-red-700 border-blue-600 text-yellow-300 shadow-[0_0_15px_#dc2626]' },
+    { id: 'spiderman', name: 'Spider-Verse', prem: true, color: 'bg-red-700 border-blue-600 text-yellow-300' },
     { id: '30_4', name: 'Đại Thắng 30/4', prem: true, color: 'bg-red-800 border-yellow-400 text-yellow-200' },
     { id: 'vietnam', name: 'Tự Hào VN', prem: true, color: 'bg-red-900 border-yellow-500 text-yellow-400' },
+    // 3 THEME MỚI ĐẲNG CẤP VIP
+    { id: 'wedding', name: 'Royal Wedding', prem: true, color: 'bg-slate-50 border-amber-300 text-amber-700 shadow-[0_0_15px_#fcd34d]' },
+    { id: 'neon', name: 'Neon Party', prem: true, color: 'bg-black border-cyan-400 text-fuchsia-400 shadow-[0_0_20px_#22d3ee]' },
+    { id: 'retro', name: 'Vintage Film', prem: true, color: 'bg-[#d4c5b0] border-[#3e2723] text-[#4e342e]' },
   ];
 
   const handleSelect = (type: 'layout'|'theme', id: string, prem: boolean) => {
@@ -242,12 +245,10 @@ export default function Photobooth() {
             
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200"><LayoutGrid size={20} className="text-pink-400"/> Chọn Kích Thước</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {layouts.map((item) => (
-                  <button key={item.id} onClick={() => handleSelect('layout', item.id, item.prem)} className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-start relative ${layout === item.id ? 'border-pink-500 bg-pink-500/20' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>
-                    {item.prem && <Lock size={14} className="absolute top-2 right-2 text-yellow-500" />}
-                    <div className="font-bold text-sm">{item.name}</div>
-                    <div className="text-xs text-gray-400">{item.desc}</div>
+              <div className="flex overflow-x-auto pb-4 gap-3 snap-x hide-scrollbar">
+                {themes.map((item) => (
+                  <button key={item.id} onClick={() => handleSelect('theme', item.id, item.prem)} className={`shrink-0 w-36 p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center font-bold text-sm snap-center ${item.color} ${theme === item.id ? 'ring-4 ring-white ring-offset-2 ring-offset-slate-900 scale-105 z-10' : 'opacity-70 hover:opacity-100'}`}>
+                    {item.name} {item.prem && <Lock size={14} className="mt-1 opacity-80" />}
                   </button>
                 ))}
               </div>
@@ -302,7 +303,7 @@ export default function Photobooth() {
               </div>
             </div>
 
-            <div className="relative border border-white/20 rounded-2xl overflow-hidden mb-6 bg-black w-[640px] h-[360px] shadow-2xl">
+            <div className="relative border border-white/10 rounded-[2rem] overflow-hidden mb-6 bg-black w-full max-w-[640px] aspect-video shadow-2xl">
               <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover transform scale-x-[-1]" />
               {countdown !== null && countdown > 0 && <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm z-10"><span className="text-9xl font-black text-white drop-shadow-[0_0_30px_rgba(236,72,153,0.8)] animate-pulse">{countdown}</span></div>}
             </div>
