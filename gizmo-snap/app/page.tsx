@@ -4,13 +4,16 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { supabase } from "@/utils/supabase";
 import { QRCodeCanvas } from "qrcode.react";
 import Link from "next/link";
-import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Crown, Bug, ShieldAlert, LayoutGrid, Smartphone, Palette, ArrowRight, Lock } from "lucide-react";
+import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Crown, Bug, ShieldAlert, LayoutGrid, Smartphone, Palette, ArrowRight, Lock, Wand2 } from "lucide-react";
 // NHÚNG BỘ VẼ VECTOR VÀO GIAO DIỆN CHÍNH
 import FrameComposer from "@/components/FrameComposer";
 
 type FrameLayout = '2x2' | 'strip3' | 'strip4' | 'polaroid' | 'film' | 'grid6';
 // ĐÃ FIX: Thêm wedding, neon, retro vào khai báo kiểu dữ liệu để TypeScript không báo lỗi
 type FrameTheme = 'dark' | 'pink' | 'cyberpunk' | 'spiderman' | '30_4' | 'vietnam' | 'hello_kitty' | 'wedding' | 'neon' | 'retro';
+
+// Định nghĩa kiểu cho Filter
+type ImageFilter = 'none' | 'sepia' | 'grayscale' | 'vintage' | 'brighten' | 'cool';
 
 export default function Photobooth() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -36,6 +39,10 @@ export default function Photobooth() {
   
   // STATE KÍCH HOẠT BỘ VẼ VECTOR
   const [isLoadingComposer, setIsLoadingComposer] = useState<boolean>(false);
+
+  // --- STATE CHO FILTER & CÀ DA ( SMOOTHING ) ---
+  const [selectedFilter, setSelectedFilter] = useState<ImageFilter>('none');
+  const [skinSmoothness, setSkinSmoothness] = useState<number>(50); // Mức độ cà da (0-100)
 
   // Kiểm tra quyền Premium
   const isPremium = profile?.plan === 'pro' || profile?.plan === 'limitless' || profile?.plan === 'exclusive';
@@ -202,8 +209,18 @@ export default function Photobooth() {
     if (type === 'layout') setLayout(id as FrameLayout); else setTheme(id as FrameTheme);
   };
 
+  // UI Dữ liệu cho Filter
+  const filters: { id: ImageFilter; name: string; css: string }[] = [
+    { id: 'none', name: 'Gốc', css: '' },
+    { id: 'sepia', name: 'Sepia', css: 'sepia(0.8)' },
+    { id: 'grayscale', name: 'B&W', css: 'grayscale(1)' },
+    { id: 'vintage', name: 'Hoài cổ', css: 'sepia(0.5) contrast(1.1) brightness(0.9)' },
+    { id: 'brighten', name: 'Sáng', css: 'brightness(1.2) contrast(1.1)' },
+    { id: 'cool', name: 'Lạnh', css: 'hue-rotate(10deg) saturate(1.2)' },
+  ];
+
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6 font-sans">
+    <div className="flex flex-col items-center min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6 font-sans selection:bg-pink-500 selection:text-white">
       {isFlashing && <div className="fixed inset-0 bg-white z-[9999] opacity-100 transition-opacity duration-300 mix-blend-screen pointer-events-none" />}
 
       {/* NAVBAR */}
@@ -273,10 +290,10 @@ export default function Photobooth() {
             </button>
           </div>
 
-          {/* Màn hình Nháp CSS bên phải */}
-          <div className="w-full lg:w-[400px] bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center">
+          {/* Màn hình Nháp CSS bên phải (image_14.png - ĐÃ TỐI ƯU HÓA) */}
+          <div className="w-full lg:w-[400px] bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center relative">
              <h3 className="text-lg font-semibold mb-6 text-gray-300">Xem trước CSS (Bản nháp)</h3>
-             <div className={`transition-all duration-500 rounded-xl p-4 flex flex-col items-center shadow-2xl ${themes.find(t => t.id === theme)?.color} w-[260px] max-h-[400px]`}>
+             <div className={`transition-all duration-500 rounded-xl p-4 flex flex-col items-center shadow-2xl ${themes.find(t => t.id === theme)?.color} w-[260px] h-[340px] max-h-[400px]`}>
                 <h4 className="font-black text-xl mb-4 text-center tracking-wider">{theme.toUpperCase()}</h4>
                 
                 <div className={`grid gap-2 w-full ${layout === '2x2' || layout === 'grid6' ? 'grid-cols-2' : layout === 'film' ? 'grid-cols-3' : 'grid-cols-1'}`}>
@@ -287,7 +304,10 @@ export default function Photobooth() {
                    ))}
                 </div>
              </div>
-             <p className="text-xs text-gray-400 mt-8 text-center px-4">Bản vẽ Vector nghệ thuật siêu chi tiết sẽ được tự động vẽ ra sau khi bạn bấm chụp ở Bước 2.</p>
+             {/* ĐÃ DI CHUYỂN VÀ LÀM NGẮN VĂN BẢN (image_14.png - ĐÃ FIX) */}
+             <div className="text-xs text-gray-400 mt-6 text-center px-4 w-full">
+                Vector nghệ thuật siêu chi tiết sẽ được tự động vẽ ra sau khi bạn chụp ở Bước 2.
+             </div>
           </div>
         </div>
       )}
@@ -307,8 +327,25 @@ export default function Photobooth() {
             </div>
 
             <div className="relative border border-white/10 rounded-[2rem] overflow-hidden mb-6 bg-black w-full max-w-[640px] aspect-video shadow-2xl">
-              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover transform scale-x-[-1]" />
+              <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover transform scale-x-[-1] transition-all`} style={{ filter: filters.find(f => f.id === selectedFilter)?.css }} />
               {countdown !== null && countdown > 0 && <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm z-10"><span className="text-7xl md:text-9xl font-black text-white drop-shadow-[0_0_30px_rgba(236,72,153,0.8)] animate-pulse">{countdown}</span></div>}
+            </div>
+
+            {/* --- BẢNG ĐIỀU KHIỂN FILTER & CÀ DA --- */}
+            <div className="flex flex-col gap-4 w-full max-w-[640px] bg-slate-800/80 backdrop-blur-sm p-5 rounded-[2rem] border border-white/10 shadow-2xl mb-6">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-pink-400"><Wand2 size={20}/> Bộ lọc & Cà da</h3>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {filters.map((f) => (
+                  <button key={f.id} onClick={() => setSelectedFilter(f.id)} className={`py-2 rounded-xl text-sm font-bold border transition-all ${selectedFilter === f.id ? 'bg-pink-500 text-white border-pink-600' : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10'}`}>
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+              <div className="w-full flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/10">
+                <label className="text-xs font-semibold text-gray-300">Cà da</label>
+                <input type="range" min="0" max="100" value={skinSmoothness} onChange={(e) => setSkinSmoothness(Number(e.target.value))} className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-pink-500" />
+                <span className="text-xs font-mono text-gray-400 min-w-[40px]">{skinSmoothness}%</span>
+              </div>
             </div>
 
             <div className="flex gap-2 md:gap-4 w-full justify-center">
@@ -369,6 +406,8 @@ export default function Photobooth() {
         onGenerateSuccess={handleComposerSuccess}
         onGenerateError={handleComposerError}
         userEmail={user?.email}
+        selectedFilter={selectedFilter}
+        skinSmoothness={skinSmoothness}
       />
 
     </div>
