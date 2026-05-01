@@ -11,7 +11,6 @@ type FrameLayout = '2x2' | 'strip3' | 'strip4' | 'polaroid' | 'film' | 'grid6';
 type FrameTheme = 'dark' | 'pink' | 'hello_kitty' | 'minimal' | 'ocean' | 'sunset' | 'pastel' | 'nature' | 'y2k' | 'wedding' | 'neon' | 'retro' | 'spiderman' | '30_4' | 'vietnam' | 'golden' | 'cyberpunk' | 'newspaper' | 'kawaii' | 'gothic' | 'holo' | 'vnu_theme';
 type ImageFilter = 'none' | 'sepia' | 'grayscale' | 'vintage' | 'brighten' | 'cool';
 
-// Hàm siêu việt biến link Google Drive thành Link Ảnh Trực Tiếp (Sửa lỗi vỡ ảnh)
 export const getDirectDriveLink = (url: string) => {
   if (!url) return '';
   const match = url.match(/\/d\/(.+?)\//);
@@ -52,7 +51,6 @@ export default function Photobooth() {
 
   useEffect(() => {
     const getSession = async () => {
-      // KIỂM TRA BẢO TRÌ TRƯỚC
       const { data: setting } = await supabase.from('site_settings').select('value').eq('id', 'maintenance').single();
       if (setting?.value === 'true') setIsMaintenance(true);
 
@@ -67,14 +65,35 @@ export default function Photobooth() {
   }, []);
 
   const fetchProfile = async (userData: any) => {
+    // 1. Lấy dữ liệu từ hàm RPC
     let { data } = await supabase.rpc('check_and_reset_shoots', { user_id: userData.id });
-    if (!data) { const { data: fallback } = await supabase.from("profiles").select("*").eq("id", userData.id).single(); data = fallback; }
-    if (userData.email?.endsWith('@vnu.edu.vn') && data?.plan !== 'vnu' && data?.plan !== 'limitless' && data?.plan !== 'exclusive') {
+    
+    // 2. SỬA LỖI: Mở chiếc hộp Array ra để lấy Object thật
+    let currentProfile = null;
+    if (Array.isArray(data) && data.length > 0) currentProfile = data[0];
+    else if (data && !Array.isArray(data)) currentProfile = data;
+
+    // 3. Fallback lấy thường
+    if (!currentProfile) { 
+      const { data: fallback } = await supabase.from("profiles").select("*").eq("id", userData.id).single(); 
+      currentProfile = fallback; 
+    }
+
+    // 4. SỬA LỖI KHÁCH HÀNG MỚI TINH: Tự động khởi tạo Free 10 lượt
+    if (!currentProfile) {
+      const newProfile = { id: userData.id, role: 'user', plan: 'free', daily_shoots: 10 };
+      await supabase.from('profiles').insert([newProfile]);
+      currentProfile = newProfile;
+    }
+
+    // 5. Kiểm tra VNU
+    if (userData.email?.endsWith('@vnu.edu.vn') && currentProfile?.plan !== 'vnu' && currentProfile?.plan !== 'limitless' && currentProfile?.plan !== 'exclusive') {
       await supabase.from('profiles').update({ plan: 'vnu', daily_shoots: 50 }).eq('id', userData.id);
-      data.plan = 'vnu'; data.daily_shoots = 50;
+      currentProfile.plan = 'vnu'; currentProfile.daily_shoots = 50;
       alert("🎉 TING TING! Hệ thống nhận diện Email VNU. Tặng bạn gói Đặc quyền!");
     }
-    setProfile(data);
+    
+    setProfile(currentProfile);
   };
 
   const fetchMyOrders = async () => {
@@ -159,7 +178,6 @@ export default function Photobooth() {
       const data = await res.json();
       if (data.success) {
         setQrLink(data.link);
-        // Lưu thẳng vào Bảng Kho Ảnh cho Admin duyệt
         if (user) await supabase.from('photos').insert([{ user_id: user.id, user_email: user.email, image_url: data.link }]);
       } else alert("Lỗi API: " + data.error);
     } catch (err: any) { alert("Lỗi kết nối: " + err.message); } finally { setIsUploading(false); setIsLoadingComposer(false); }
@@ -186,23 +204,21 @@ export default function Photobooth() {
     if (type === 'layout') setLayout(id as FrameLayout); else setTheme(id as FrameTheme);
   };
 
-  // --- THÊM MÀN HÌNH BẢO TRÌ VÀO ĐÂY ---
   if (isMaintenance && profile?.role !== 'admin') {
     return (
       <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center text-center p-6 selection:bg-pink-500">
         <Sparkles size={64} className="text-pink-500 mb-6 animate-pulse" />
         <h1 className="text-4xl font-black mb-4">Bảo Trì Hệ Thống</h1>
         <p className="text-gray-400 max-w-lg mb-8 text-lg">Gizmo Snap đang được nâng cấp để mang lại trải nghiệm mượt mà hơn. Vui lòng quay lại sau ít phút nhé!</p>
-        {user ? <button onClick={logout} className="text-sm bg-white/10 px-4 py-2 rounded-xl">Đăng xuất</button> : <button onClick={loginWithGoogle} className="text-sm bg-white/10 px-4 py-2 rounded-xl">Đăng nhập Admin</button>}
+        {user ? <button onClick={logout} className="text-sm bg-white/10 px-4 py-2 rounded-xl hover:bg-white/20">Đăng xuất</button> : <button onClick={loginWithGoogle} className="text-sm bg-white/10 px-4 py-2 rounded-xl hover:bg-white/20">Đăng nhập Admin</button>}
       </div>
     );
   }
-  // -------------------------------------
+
   return (
     <div className="flex flex-col items-center min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6 font-sans selection:bg-pink-500 selection:text-white">
       {isFlashing && <div className="fixed inset-0 bg-white z-[9999] opacity-100 transition-opacity duration-300 mix-blend-screen pointer-events-none" />}
 
-      {/* NAVBAR */}
       <div className="w-full max-w-7xl flex justify-between items-center mb-8 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-2xl">
         <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500 tracking-tight flex items-center gap-2 cursor-pointer" onClick={() => setStep(1)}>
           <Camera size={32} className="text-pink-500" /> Gizmo Snap
@@ -217,7 +233,6 @@ export default function Photobooth() {
               <Package size={16} /> Đơn in ảnh
             </button>
 
-            {/* NÚT VÀO TRANG ADMIN SIÊU TO KHỔNG LỒ */}
             {profile?.role === 'admin' && (
               <Link href="/admin" className="flex items-center gap-2 text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-2 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.4)] hover:scale-105 transition-transform">
                 <ShieldCheck size={18} /> Quản Trị Hệ Thống
@@ -245,7 +260,6 @@ export default function Photobooth() {
         )}
       </div>
 
-      {/* --- MÀN HÌNH BƯỚC 1 --- */}
       {step === 1 && (
         <div className="flex flex-col lg:flex-row gap-8 w-full max-w-7xl items-stretch animate-in fade-in zoom-in duration-500">
           <div className="flex-1 bg-white/5 backdrop-blur-md p-8 rounded-3xl border border-white/10 shadow-2xl">
@@ -292,7 +306,6 @@ export default function Photobooth() {
         </div>
       )}
 
-      {/* --- MÀN HÌNH BƯỚC 2 --- */}
       {step === 2 && (
         <div className="flex flex-col xl:flex-row gap-8 w-full max-w-7xl justify-center items-start animate-in slide-in-from-right-10 fade-in duration-500">
           <div className="flex flex-col items-center bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex-1 w-full">
@@ -374,7 +387,6 @@ export default function Photobooth() {
         </div>
       )}
 
-      {/* --- MODAL YÊU CẦU IN ẢNH --- */}
       {showPrintModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white text-slate-900 w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
@@ -402,7 +414,6 @@ export default function Photobooth() {
         </div>
       )}
 
-      {/* --- MODAL LỊCH SỬ ĐƠN (ĐÃ SỬA LỖI ẢNH DRIVE) --- */}
       {showOrdersModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white text-slate-900 w-full max-w-2xl rounded-3xl p-6 shadow-2xl relative max-h-[80vh] flex flex-col">
@@ -415,7 +426,6 @@ export default function Photobooth() {
                 <div className="flex flex-col gap-4">
                   {myOrders.map(order => (
                     <div key={order.id} className="border border-gray-100 bg-gray-50 p-4 rounded-2xl flex gap-4 items-start">
-                      {/* DÙNG HÀM getDirectDriveLink ĐỂ SỬA LỖI ẢNH */}
                       <a href={order.image_url} target="_blank" rel="noreferrer">
                         <img src={getDirectDriveLink(order.image_url)} alt="preview" className="w-20 h-20 object-cover rounded-lg border border-gray-200 shadow-sm" />
                       </a>
