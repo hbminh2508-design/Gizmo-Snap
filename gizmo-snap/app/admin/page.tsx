@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase";
 import Link from "next/link";
 import { getDirectDriveLink } from "../page";
+// ĐÃ FIX: Import thêm Loader2 vào đây
+import { Loader2 } from "lucide-react"; 
 
 export default function AdminBios() {
   const [loading, setLoading] = useState(true);
@@ -38,11 +40,9 @@ export default function AdminBios() {
   };
 
   const fetchSystemData = async () => {
-    // Lấy trạng thái bảo trì
     const { data: setting } = await supabase.from('site_settings').select('value').eq('id', 'maintenance').single();
     if (setting) setIsMaintenance(setting.value === 'true');
 
-    // Đếm ảnh hôm nay
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const { count } = await supabase.from('photos').select('*', { count: 'exact', head: true }).gte('created_at', today.toISOString());
     setTodayCount(count || 0);
@@ -58,7 +58,6 @@ export default function AdminBios() {
     if (data) setGallery(data);
   };
 
-  // Các hàm xử lý
   const handleUpdateUserPlan = async (e: React.FormEvent) => {
     e.preventDefault(); setIsUpdatingUser(true);
     const { data, error } = await supabase.rpc('admin_update_user_plan', { target_email: targetEmail, new_plan: selectedPlan, admin_id: adminId });
@@ -193,11 +192,13 @@ export default function AdminBios() {
                 <h2 className="text-xl mb-4 border-b border-[#0f0] pb-2 text-center">OVERRIDE USER PRIVILEGE</h2>
                 <form onSubmit={handleUpdateUserPlan} className="flex flex-col gap-4">
                   <div>
-                    <label className="block mb-1 opacity-80">> TARGET_EMAIL:</label>
+                    {/* ĐÃ FIX: Bọc dấu > bằng {' '} */}
+                    <label className="block mb-1 opacity-80">{'>'} TARGET_EMAIL:</label>
                     <input required type="email" value={targetEmail} onChange={e => setTargetEmail(e.target.value)} className="w-full bg-black border border-[#0f0] p-2 focus:outline-none focus:bg-[#0f0]/10" placeholder="user@domain.com" />
                   </div>
                   <div>
-                    <label className="block mb-1 opacity-80">> NEW_CLEARANCE_LEVEL:</label>
+                    {/* ĐÃ FIX: Bọc dấu > bằng {' '} */}
+                    <label className="block mb-1 opacity-80">{'>'} NEW_CLEARANCE_LEVEL:</label>
                     <select value={selectedPlan} onChange={e => setSelectedPlan(e.target.value)} className="w-full bg-black border border-[#0f0] p-2 focus:outline-none">
                       <option value="free">L0: FREE_TIER [REVOKE VIP]</option>
                       <option value="pro">L1: PRO_TIER</option>
@@ -206,8 +207,9 @@ export default function AdminBios() {
                       <option value="vnu">SP: VNU_STUDENT</option>
                     </select>
                   </div>
-                  <button disabled={isUpdatingUser} type="submit" className={`w-full py-3 mt-4 border border-[#0f0] font-bold ${isUpdatingUser ? 'opacity-50' : 'hover:bg-[#0f0] hover:text-black transition-colors'}`}>
-                    {isUpdatingUser ? 'EXECUTING...' : 'EXECUTE_OVERRIDE()'}
+                  <button disabled={isUpdatingUser} type="submit" className={`w-full py-3 mt-4 border border-[#0f0] font-bold flex justify-center items-center gap-2 ${isUpdatingUser ? 'opacity-50' : 'hover:bg-[#0f0] hover:text-black transition-colors'}`}>
+                    {/* ĐÃ FIX: Sử dụng Loader2 thành công */}
+                    {isUpdatingUser ? <Loader2 className="animate-spin" size={20}/> : 'EXECUTE_OVERRIDE()'}
                   </button>
                 </form>
               </div>
