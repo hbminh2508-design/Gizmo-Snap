@@ -9,7 +9,8 @@ import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Cro
 import FrameComposer from "@/components/FrameComposer";
 
 type FrameLayout = '2x2' | 'strip3' | 'strip4' | 'polaroid' | 'film' | 'grid6';
-type FrameTheme = 'dark' | 'pink' | 'cyberpunk' | 'spiderman' | '30_4' | 'vietnam' | 'hello_kitty';
+// ĐÃ FIX: Thêm wedding, neon, retro vào khai báo kiểu dữ liệu để TypeScript không báo lỗi
+type FrameTheme = 'dark' | 'pink' | 'cyberpunk' | 'spiderman' | '30_4' | 'vietnam' | 'hello_kitty' | 'wedding' | 'neon' | 'retro';
 
 export default function Photobooth() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -246,9 +247,11 @@ export default function Photobooth() {
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200"><LayoutGrid size={20} className="text-pink-400"/> Chọn Kích Thước</h3>
               <div className="flex overflow-x-auto pb-4 gap-3 snap-x hide-scrollbar">
-                {themes.map((item) => (
-                  <button key={item.id} onClick={() => handleSelect('theme', item.id, item.prem)} className={`shrink-0 w-36 p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center font-bold text-sm snap-center ${item.color} ${theme === item.id ? 'ring-4 ring-white ring-offset-2 ring-offset-slate-900 scale-105 z-10' : 'opacity-70 hover:opacity-100'}`}>
-                    {item.name} {item.prem && <Lock size={14} className="mt-1 opacity-80" />}
+                {layouts.map((item) => (
+                  <button key={item.id} onClick={() => handleSelect('layout', item.id, item.prem)} className={`shrink-0 w-36 p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center font-bold text-sm snap-center ${layout === item.id ? 'border-pink-500 bg-pink-500/20' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>
+                    {item.prem && <Lock size={14} className="mb-1 text-yellow-500" />}
+                    <div className="font-bold text-sm">{item.name}</div>
+                    <div className="text-xs text-gray-400">{item.desc}</div>
                   </button>
                 ))}
               </div>
@@ -294,43 +297,43 @@ export default function Photobooth() {
         <div className="flex flex-col xl:flex-row gap-8 w-full max-w-7xl justify-center items-start animate-in slide-in-from-right-10 fade-in duration-500">
           
           {/* CỘT TRÁI: CAMERA */}
-          <div className="flex flex-col items-center bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex-1">
+          <div className="flex flex-col items-center bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex-1 w-full">
             <div className="flex justify-between w-full mb-4">
                <button onClick={() => { setStep(1); stopAutoShoot(); }} className="text-sm text-gray-400 hover:text-white flex items-center gap-1 bg-white/5 px-3 py-1 rounded-lg transition"><ArrowRight className="rotate-180" size={16}/> Đổi khung</button>
                <div className="flex bg-slate-800/50 p-1 rounded-xl border border-white/5">
-                <button onClick={() => { setIsAutoMode(false); stopAutoShoot(); }} className={`px-6 py-1.5 rounded-lg transition-all text-sm font-semibold ${!isAutoMode ? 'bg-gradient-to-r from-pink-500 to-violet-500 text-white' : 'text-gray-400'}`}>Thủ công</button>
-                <button onClick={() => setIsAutoMode(true)} className={`px-6 py-1.5 rounded-lg transition-all text-sm font-semibold ${isAutoMode ? 'bg-gradient-to-r from-pink-500 to-violet-500 text-white' : 'text-gray-400'}`}>Tự động</button>
+                <button onClick={() => { setIsAutoMode(false); stopAutoShoot(); }} className={`px-4 md:px-6 py-1.5 rounded-lg transition-all text-sm font-semibold ${!isAutoMode ? 'bg-gradient-to-r from-pink-500 to-violet-500 text-white' : 'text-gray-400'}`}>Thủ công</button>
+                <button onClick={() => setIsAutoMode(true)} className={`px-4 md:px-6 py-1.5 rounded-lg transition-all text-sm font-semibold ${isAutoMode ? 'bg-gradient-to-r from-pink-500 to-violet-500 text-white' : 'text-gray-400'}`}>Tự động</button>
               </div>
             </div>
 
             <div className="relative border border-white/10 rounded-[2rem] overflow-hidden mb-6 bg-black w-full max-w-[640px] aspect-video shadow-2xl">
               <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover transform scale-x-[-1]" />
-              {countdown !== null && countdown > 0 && <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm z-10"><span className="text-9xl font-black text-white drop-shadow-[0_0_30px_rgba(236,72,153,0.8)] animate-pulse">{countdown}</span></div>}
+              {countdown !== null && countdown > 0 && <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm z-10"><span className="text-7xl md:text-9xl font-black text-white drop-shadow-[0_0_30px_rgba(236,72,153,0.8)] animate-pulse">{countdown}</span></div>}
             </div>
 
-            <div className="flex gap-4 w-full justify-center">
+            <div className="flex gap-2 md:gap-4 w-full justify-center">
               {!isAutoMode ? (
-                <button onClick={() => { if (user && !isPremium && profile?.daily_shoots <= 0) { alert("Hết lượt chụp!"); return; } captureWithFlash(); }} disabled={photos.length >= maxPhotos} className={`flex items-center gap-2 font-bold py-3.5 px-8 rounded-2xl shadow-xl transition-all active:scale-95 ${photos.length >= maxPhotos ? "bg-gray-600 text-gray-400" : "bg-gradient-to-r from-pink-500 to-violet-500 text-white"}`}>
-                  <Camera size={20} /> Chụp ({photos.length}/{maxPhotos})
+                <button onClick={() => { if (user && !isPremium && profile?.daily_shoots <= 0) { alert("Hết lượt chụp!"); return; } captureWithFlash(); }} disabled={photos.length >= maxPhotos} className={`flex flex-1 md:flex-none items-center justify-center gap-2 font-bold py-3.5 px-4 md:px-8 rounded-2xl shadow-xl transition-all active:scale-95 ${photos.length >= maxPhotos ? "bg-gray-600 text-gray-400" : "bg-gradient-to-r from-pink-500 to-violet-500 text-white"}`}>
+                  <Camera size={20} /> <span className="hidden sm:inline">Chụp</span> ({photos.length}/{maxPhotos})
                 </button>
               ) : (
                 !isShooting ? (
-                  <button onClick={startAutoShoot} disabled={photos.length >= maxPhotos} className={`flex items-center gap-2 font-bold py-3.5 px-8 rounded-2xl shadow-xl transition-all active:scale-95 ${photos.length >= maxPhotos ? "bg-gray-600 text-gray-400" : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"}`}>
-                    <Play size={20} /> Bắt đầu ({photos.length}/{maxPhotos})
+                  <button onClick={startAutoShoot} disabled={photos.length >= maxPhotos} className={`flex flex-1 md:flex-none items-center justify-center gap-2 font-bold py-3.5 px-4 md:px-8 rounded-2xl shadow-xl transition-all active:scale-95 ${photos.length >= maxPhotos ? "bg-gray-600 text-gray-400" : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"}`}>
+                    <Play size={20} /> <span className="hidden sm:inline">Bắt đầu</span> ({photos.length}/{maxPhotos})
                   </button>
                 ) : (
-                  <button onClick={stopAutoShoot} className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-rose-500 text-white font-bold py-3.5 px-8 rounded-2xl shadow-xl active:scale-95"><Square size={20} fill="currentColor" /> Dừng lại</button>
+                  <button onClick={stopAutoShoot} className="flex flex-1 md:flex-none items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-rose-500 text-white font-bold py-3.5 px-4 md:px-8 rounded-2xl shadow-xl active:scale-95"><Square size={20} fill="currentColor" /> <span className="hidden sm:inline">Dừng</span></button>
                 )
               )}
-              <button onClick={resetBooth} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-bold py-3.5 px-6 rounded-2xl transition-all"><RefreshCcw size={20} /> Xóa</button>
+              <button onClick={resetBooth} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white font-bold py-3.5 px-4 md:px-6 rounded-2xl transition-all"><RefreshCcw size={20} /> <span className="hidden sm:inline">Xóa</span></button>
             </div>
           </div>
 
           {/* CỘT PHẢI: PREVIEW ẢNH ĐÃ CHỤP & RENDER VECTOR */}
-          <div className="flex flex-col items-center bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl shrink-0 min-w-[360px]">
+          <div className="flex flex-col items-center bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl shrink-0 w-full xl:min-w-[360px] xl:w-auto">
             <h2 className="text-xl font-bold mb-4 text-gray-200 flex items-center gap-2">Nháp Khung {layout.toUpperCase()}</h2>
             
-            <div className={`p-2 bg-slate-900/50 border border-white/10 shadow-inner rounded-xl grid gap-2 ${layout === '2x2' || layout === 'grid6' ? 'grid-cols-2 w-[340px]' : layout === 'film' ? 'grid-cols-3 w-[340px]' : layout === 'polaroid' ? 'grid-cols-1 w-[300px]' : 'grid-cols-1 w-[200px]'}`}>
+            <div className={`p-2 bg-slate-900/50 border border-white/10 shadow-inner rounded-xl grid gap-2 ${layout === '2x2' || layout === 'grid6' ? 'grid-cols-2 w-[300px] sm:w-[340px]' : layout === 'film' ? 'grid-cols-3 w-[300px] sm:w-[340px]' : layout === 'polaroid' ? 'grid-cols-1 w-[260px] sm:w-[300px]' : 'grid-cols-1 w-[200px]'}`}>
               {[...Array(maxPhotos)].map((_, index) => (
                 <div key={index} className="bg-slate-800/50 w-full aspect-video flex items-center justify-center overflow-hidden rounded-md border border-white/5 relative">
                   {photos[index] ? <img src={photos[index]} className="w-full h-full object-cover" /> : <Camera size={16} className="text-slate-600" />}
