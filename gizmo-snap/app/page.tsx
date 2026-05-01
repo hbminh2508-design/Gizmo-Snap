@@ -4,42 +4,40 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { supabase } from "@/utils/supabase";
 import { QRCodeCanvas } from "qrcode.react";
 import Link from "next/link";
-// Đã thêm GraduationCap cho logo VNU
-import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Crown, Bug, LayoutGrid, Palette, ArrowRight, Lock, Wand2, GraduationCap } from "lucide-react";
+import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Crown, Bug, LayoutGrid, Palette, ArrowRight, Lock, Wand2, GraduationCap, Printer, Truck, X, Package } from "lucide-react";
 import FrameComposer from "@/components/FrameComposer";
 
 type FrameLayout = '2x2' | 'strip3' | 'strip4' | 'polaroid' | 'film' | 'grid6';
-// ĐÃ FIX: Danh sách 22 Theme (Có cả vnu_theme)
 type FrameTheme = 'dark' | 'pink' | 'hello_kitty' | 'minimal' | 'ocean' | 'sunset' | 'pastel' | 'nature' | 'y2k' | 'wedding' | 'neon' | 'retro' | 'spiderman' | '30_4' | 'vietnam' | 'golden' | 'cyberpunk' | 'newspaper' | 'kawaii' | 'gothic' | 'holo' | 'vnu_theme';
 type ImageFilter = 'none' | 'sepia' | 'grayscale' | 'vintage' | 'brighten' | 'cool';
 
 export default function Photobooth() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  
   const [step, setStep] = useState<number>(1);
   const [layout, setLayout] = useState<FrameLayout>('2x2');
   const [theme, setTheme] = useState<FrameTheme>('minimal');
-  
   const [photos, setPhotos] = useState<string[]>([]);
   const [hasDecremented, setHasDecremented] = useState<boolean>(false);
-
   const [isAutoMode, setIsAutoMode] = useState<boolean>(false);
   const [isShooting, setIsShooting] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [timerInterval, setTimerInterval] = useState<number>(5);
   const [isFlashing, setIsFlashing] = useState<boolean>(false);
-
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-
   const [qrLink, setQrLink] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isLoadingComposer, setIsLoadingComposer] = useState<boolean>(false);
-
   const [selectedFilter, setSelectedFilter] = useState<ImageFilter>('none');
   const [skinSmoothness, setSkinSmoothness] = useState<number>(50);
 
-  // Gói 'vnu' được tính là Premium
+  // --- STATE CHO TÍNH NĂNG IN ẢNH ---
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printForm, setPrintForm] = useState({ name: '', phone: '', address: '' });
+  const [isSubmittingPrint, setIsSubmittingPrint] = useState(false);
+  const [myOrders, setMyOrders] = useState<any[]>([]);
+  const [showOrdersModal, setShowOrdersModal] = useState(false);
+
   const isPremium = ['pro', 'limitless', 'exclusive', 'vnu'].includes(profile?.plan);
   const maxPhotosMap: Record<FrameLayout, number> = { '2x2': 4, 'strip3': 3, 'strip4': 4, 'polaroid': 1, 'film': 3, 'grid6': 6 };
   const maxPhotos = maxPhotosMap[layout];
@@ -60,79 +58,77 @@ export default function Photobooth() {
     return () => authListener.subscription.unsubscribe();
   }, []);
 
-  // ĐÃ NÂNG CẤP: Truyền nguyên object user vào để check email VNU
   const fetchProfile = async (userData: any) => {
     let { data } = await supabase.rpc('check_and_reset_shoots', { user_id: userData.id });
     if (!data) {
       const { data: fallback } = await supabase.from("profiles").select("*").eq("id", userData.id).single();
       data = fallback;
     }
-
-    // --- LOGIC HACK GROWTH: TỰ ĐỘNG CẤP VIP CHO SINH VIÊN VNU ---
     if (userData.email?.endsWith('@vnu.edu.vn') && data?.plan !== 'vnu' && data?.plan !== 'limitless' && data?.plan !== 'exclusive') {
       await supabase.from('profiles').update({ plan: 'vnu', daily_shoots: 50 }).eq('id', userData.id);
-      data.plan = 'vnu';
-      data.daily_shoots = 50;
+      data.plan = 'vnu'; data.daily_shoots = 50;
       alert("🎉 TING TING! Hệ thống nhận diện Email VNU. Tặng bạn gói Đặc quyền: 50 lượt chụp/ngày & Toàn bộ Khung VIP!");
     }
-
     setProfile(data);
+  };
+
+  // --- HÀM TẢI LỊCH SỬ ĐƠN IN ẢNH CỦA KHÁCH ---
+  const fetchMyOrders = async () => {
+    if (!user) return;
+    const { data, error } = await supabase.from('print_requests').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+    if (!error && data) setMyOrders(data);
+    setShowOrdersModal(true);
+  };
+
+  // --- HÀM GỬI YÊU CẦU IN ẢNH ---
+  const submitPrintRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!qrLink || !user) return;
+    setIsSubmittingPrint(true);
+    const { error } = await supabase.from('print_requests').insert([{
+      user_id: user.id, user_email: user.email, image_url: qrLink,
+      customer_name: printForm.name, phone: printForm.phone, address: printForm.address
+    }]);
+    setIsSubmittingPrint(false);
+    if (error) alert("Lỗi khi gửi yêu cầu: " + error.message);
+    else { alert("🎉 Gửi yêu cầu in ảnh thành công! Admin sẽ sớm liên hệ và gửi hàng cho bạn."); setShowPrintModal(false); }
   };
 
   const loginWithGoogle = async () => { await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin } }); };
   const logout = async () => { await supabase.auth.signOut(); setUser(null); setProfile(null); };
 
   const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    try { const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
       if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (err) { alert("Không thể truy cập camera. Vui lòng cấp quyền!"); }
   };
-
   useEffect(() => { if (step === 2) startCamera(); }, [step]);
 
   useEffect(() => {
     const autoDecrement = async () => {
       if (photos.length === maxPhotos && !hasDecremented && user && !['limitless', 'exclusive'].includes(profile?.plan)) {
-        setHasDecremented(true);
-        setProfile((prev: any) => ({ ...prev, daily_shoots: prev.daily_shoots - 1 }));
+        setHasDecremented(true); setProfile((prev: any) => ({ ...prev, daily_shoots: prev.daily_shoots - 1 }));
         await supabase.rpc('decrement_daily_shoots', { user_id: user.id });
       }
-    };
-    autoDecrement();
+    }; autoDecrement();
   }, [photos.length, hasDecremented, user, profile, maxPhotos]);
 
   const captureWithFlash = useCallback(async () => {
-    setIsFlashing(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    setIsFlashing(true); await new Promise((resolve) => setTimeout(resolve, 500));
     if (videoRef.current) {
-      const video = videoRef.current;
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        setPhotos((prev) => [...prev, canvas.toDataURL("image/png")]);
-      }
-    }
-    setTimeout(() => setIsFlashing(false), 200);
+      const video = videoRef.current; const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight; const ctx = canvas.getContext("2d");
+      if (ctx) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); ctx.drawImage(video, 0, 0, canvas.width, canvas.height); setPhotos((prev) => [...prev, canvas.toDataURL("image/png")]); }
+    } setTimeout(() => setIsFlashing(false), 200);
   }, []);
 
   const handleDebugMode = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 640; canvas.height = 360;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360; const ctx = canvas.getContext('2d'); if (!ctx) return;
     const fakePhotos: string[] = [];
     for(let i=0; i<maxPhotos; i++) {
-      ctx.fillStyle = '#' + Math.floor(Math.random()*16777215).toString(16);
-      ctx.fillRect(0, 0, 640, 360);
-      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center';
-      ctx.fillText(`MOCK ${i+1}`, 320, 180);
-      fakePhotos.push(canvas.toDataURL("image/png"));
-    }
-    setPhotos(fakePhotos); setHasDecremented(true); 
+      ctx.fillStyle = '#' + Math.floor(Math.random()*16777215).toString(16); ctx.fillRect(0, 0, 640, 360);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center'; ctx.fillText(`MOCK ${i+1}`, 320, 180); fakePhotos.push(canvas.toDataURL("image/png"));
+    } setPhotos(fakePhotos); setHasDecremented(true); 
   };
 
   useEffect(() => {
@@ -151,8 +147,7 @@ export default function Photobooth() {
 
   const startAutoShoot = () => {
     if (user && profile?.plan !== 'limitless' && profile?.plan !== 'exclusive' && profile?.daily_shoots <= 0) { alert("Hết lượt chụp!"); return; }
-    if (photos.length >= maxPhotos) return;
-    setIsShooting(true); setCountdown(timerInterval);
+    if (photos.length >= maxPhotos) return; setIsShooting(true); setCountdown(timerInterval);
   };
   const stopAutoShoot = () => { setIsShooting(false); setCountdown(null); };
   const resetBooth = () => { setPhotos([]); setHasDecremented(false); setIsShooting(false); setCountdown(null); setQrLink(null); };
@@ -160,8 +155,7 @@ export default function Photobooth() {
   const uploadToDrive = async (finalImageUrl: string) => {
     setIsUploading(true);
     try {
-      const fetchResponse = await fetch(finalImageUrl);
-      const blob = await fetchResponse.blob();
+      const fetchResponse = await fetch(finalImageUrl); const blob = await fetchResponse.blob();
       const formData = new FormData(); formData.append('file', blob, 'gizmo-snap.jpg');
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
@@ -169,26 +163,17 @@ export default function Photobooth() {
     } catch (err: any) { alert("Lỗi kết nối: " + err.message); } finally { setIsUploading(false); setIsLoadingComposer(false); }
   };
 
-  const handleGenerateClick = () => {
-    if (!user) { alert("Vui lòng đăng nhập!"); return; }
-    setIsLoadingComposer(true);
-  };
-
+  const handleGenerateClick = () => { if (!user) { alert("Vui lòng đăng nhập!"); return; } setIsLoadingComposer(true); };
   const handleComposerSuccess = (base64Image: string) => uploadToDrive(base64Image);
   const handleComposerError = (err: any) => { setIsLoadingComposer(false); alert("Lỗi vẽ: " + err.message); };
 
   const layouts = [
-    { id: '2x2', name: 'Lưới 2x2', desc: '4 ảnh vuông', prem: false },
-    { id: 'strip3', name: 'Dải 3 ảnh', desc: 'Dọc cổ điển', prem: false },
-    { id: 'strip4', name: 'Dải 4 ảnh', desc: 'Dọc tiêu chuẩn', prem: false },
-    { id: 'polaroid', name: 'Polaroid', desc: '1 ảnh lớn', prem: false },
-    { id: 'film', name: 'Cuộn Phim', desc: '3 ngang', prem: false },
-    { id: 'grid6', name: 'Lưới 3x2', desc: '6 ảnh (PRO+)', prem: true },
+    { id: '2x2', name: 'Lưới 2x2', desc: '4 ảnh vuông', prem: false }, { id: 'strip3', name: 'Dải 3 ảnh', desc: 'Dọc cổ điển', prem: false },
+    { id: 'strip4', name: 'Dải 4 ảnh', desc: 'Dọc tiêu chuẩn', prem: false }, { id: 'polaroid', name: 'Polaroid', desc: '1 ảnh lớn', prem: false },
+    { id: 'film', name: 'Cuộn Phim', desc: '3 ngang', prem: false }, { id: 'grid6', name: 'Lưới 3x2', desc: '6 ảnh (PRO+)', prem: true },
   ];
   
-  // TỔNG HỢP 22 THEMES SIÊU ĐẸP
   const themes = [
-    // --- 9 THEME MIỄN PHÍ TỐI ƯU ---
     { id: 'minimal', name: 'Minimal White', prem: false, color: 'bg-white border-gray-300 text-gray-800 shadow-md' },
     { id: 'dark', name: 'Dark Classic', prem: false, color: 'bg-slate-900 border-slate-700 text-slate-300' },
     { id: 'pink', name: 'Pinky Cute', prem: false, color: 'bg-pink-50 border-pink-300 text-pink-600' },
@@ -198,8 +183,6 @@ export default function Photobooth() {
     { id: 'nature', name: 'Botanical', prem: false, color: 'bg-green-100 border-green-400 text-green-800' },
     { id: 'y2k', name: 'Y2K Cyber', prem: false, color: 'bg-zinc-200 border-zinc-400 text-zinc-900' },
     { id: 'hello_kitty', name: 'Hello Kitty', prem: false, color: 'bg-pink-200 border-pink-500 text-pink-800 shadow-[0_0_10px_#f472b6]' },
-
-    // --- 13 THEME VIP ĐẲNG CẤP (Bao gồm VNU) ---
     { id: 'vnu_theme', name: '#ToiLaSinhVienVNU', prem: true, color: 'bg-[#0f5132] border-[#22c55e] text-white shadow-[0_0_15px_#22c55e]' },
     { id: 'golden', name: 'Golden Hour', prem: true, color: 'bg-yellow-900 border-yellow-400 text-yellow-200 shadow-[0_0_15px_#facc15]' },
     { id: 'wedding', name: 'Royal Wedding', prem: true, color: 'bg-slate-50 border-amber-300 text-amber-700 shadow-[0_0_15px_#fcd34d]' },
@@ -216,12 +199,8 @@ export default function Photobooth() {
   ];
 
   const filters: { id: ImageFilter; name: string; css: string }[] = [
-    { id: 'none', name: 'Gốc', css: '' },
-    { id: 'sepia', name: 'Sepia', css: 'sepia(0.8)' },
-    { id: 'grayscale', name: 'B&W', css: 'grayscale(1)' },
-    { id: 'vintage', name: 'Hoài cổ', css: 'sepia(0.5) contrast(1.1) brightness(0.9)' },
-    { id: 'brighten', name: 'Sáng', css: 'brightness(1.2) contrast(1.1)' },
-    { id: 'cool', name: 'Lạnh', css: 'hue-rotate(10deg) saturate(1.2)' },
+    { id: 'none', name: 'Gốc', css: '' }, { id: 'sepia', name: 'Sepia', css: 'sepia(0.8)' }, { id: 'grayscale', name: 'B&W', css: 'grayscale(1)' },
+    { id: 'vintage', name: 'Hoài cổ', css: 'sepia(0.5) contrast(1.1) brightness(0.9)' }, { id: 'brighten', name: 'Sáng', css: 'brightness(1.2) contrast(1.1)' }, { id: 'cool', name: 'Lạnh', css: 'hue-rotate(10deg) saturate(1.2)' },
   ];
 
   const handleSelect = (type: 'layout'|'theme', id: string, prem: boolean) => {
@@ -243,6 +222,12 @@ export default function Photobooth() {
             <Link href="/pricing" className="hidden sm:flex items-center gap-2 text-sm font-semibold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl transition">
               <Crown size={16} className="text-yellow-400" /> Bảng giá
             </Link>
+            
+            {/* NÚT XEM ĐƠN IN ẢNH CHO KHÁCH */}
+            <button onClick={fetchMyOrders} className="hidden sm:flex items-center gap-2 text-sm font-semibold bg-pink-500/20 text-pink-300 border border-pink-500/50 hover:bg-pink-500/40 px-4 py-2 rounded-xl transition">
+              <Package size={16} /> Đơn in ảnh
+            </button>
+
             {profile?.role === 'admin' && step === 2 && (
               <button onClick={handleDebugMode} className="hidden lg:flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/40 px-3 py-1.5 rounded-lg text-sm font-bold transition">
                 <Bug size={16} /> Debug Mock
@@ -251,13 +236,11 @@ export default function Photobooth() {
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-gray-200">{user.email}</p>
               <div className="flex items-center justify-end gap-2 mt-1">
-                {/* HIỂN THỊ BADGE VNU */}
                 {profile?.plan === 'vnu' ? (
                   <span className="flex items-center gap-1 text-[10px] bg-gradient-to-r from-green-600 to-emerald-500 text-white px-2 py-0.5 rounded-full uppercase font-bold tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.5)]"><GraduationCap size={12}/> VNU VIP</span>
                 ) : (
                   <span className="text-[10px] bg-gradient-to-r from-pink-500 to-violet-500 text-white px-2 py-0.5 rounded-full uppercase font-bold tracking-wider shadow-lg">{profile?.plan || "free"}</span>
                 )}
-                
                 {profile?.plan !== 'limitless' && profile?.plan !== 'exclusive' && (
                   <span className="text-[10px] bg-white/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-bold ml-2">Còn: {profile?.daily_shoots || 0} lượt</span>
                 )}
@@ -318,9 +301,7 @@ export default function Photobooth() {
                    ))}
                 </div>
              </div>
-             <div className="text-xs text-gray-400 mt-6 text-center px-4 w-full">
-                Vector nghệ thuật siêu chi tiết sẽ được tự động vẽ ra sau khi bạn chụp ở Bước 2.
-             </div>
+             <div className="text-xs text-gray-400 mt-6 text-center px-4 w-full">Vector nghệ thuật siêu chi tiết sẽ được tự động vẽ ra sau khi bạn chụp ở Bước 2.</div>
           </div>
         </div>
       )}
@@ -393,28 +374,96 @@ export default function Photobooth() {
               </button>
             )}
 
+            {/* HIỂN THỊ NÚT YÊU CẦU IN ẢNH CHO GÓI EXCLUSIVE */}
             {qrLink && (
-              <div className="mt-6 flex flex-col items-center bg-white p-4 rounded-3xl shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-500">
-                <div className="p-2 border-4 border-pink-100 rounded-xl mb-2"><QRCodeCanvas value={qrLink} size={140} level={"H"} includeMargin={false} /></div>
-                <p className="text-slate-800 font-bold text-xs text-center">Quét QR lưu ảnh gốc</p>
+              <div className="mt-6 flex flex-col items-center bg-white p-6 rounded-3xl shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-500 w-full">
+                <div className="p-2 border-4 border-pink-100 rounded-xl mb-4"><QRCodeCanvas value={qrLink} size={140} level={"H"} includeMargin={false} /></div>
+                <p className="text-slate-800 font-bold text-sm text-center mb-4">Quét QR để tải ảnh gốc</p>
+                
+                {profile?.plan === 'exclusive' && (
+                  <button onClick={() => setShowPrintModal(true)} className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-3 rounded-xl shadow-lg hover:scale-105 transition-transform">
+                    <Printer size={18} /> Yêu cầu in ảnh cứng
+                  </button>
+                )}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* COMPONENT VẼ VECTOR ĐA NĂNG */}
+      {/* --- MODAL YÊU CẦU IN ẢNH --- */}
+      {showPrintModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white text-slate-900 w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
+            <button onClick={() => setShowPrintModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500"><X size={24}/></button>
+            <h3 className="text-2xl font-black mb-2 flex items-center gap-2 text-amber-600"><Printer /> Giao ảnh tận nhà</h3>
+            <p className="text-sm text-gray-500 mb-6">Đặc quyền gói Exclusive: Chúng tôi sẽ in ảnh chất lượng cao và gửi đến tận cửa nhà bạn hoàn toàn miễn phí!</p>
+            <form onSubmit={submitPrintRequest} className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-bold text-gray-700">Họ và tên người nhận</label>
+                <input required value={printForm.name} onChange={e => setPrintForm({...printForm, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mt-1 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="VD: Nguyễn Văn A" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-700">Số điện thoại</label>
+                <input required type="tel" value={printForm.phone} onChange={e => setPrintForm({...printForm, phone: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mt-1 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="VD: 0987654321" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-700">Địa chỉ giao hàng chi tiết</label>
+                <textarea required value={printForm.address} onChange={e => setPrintForm({...printForm, address: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mt-1 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[80px]" placeholder="Số nhà, Đường, Phường, Quận, Thành phố..." />
+              </div>
+              <button disabled={isSubmittingPrint} type="submit" className={`w-full font-bold py-4 rounded-xl text-white transition-all mt-2 flex justify-center items-center gap-2 ${isSubmittingPrint ? 'bg-gray-400' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-lg hover:-translate-y-1'}`}>
+                {isSubmittingPrint ? <Loader2 className="animate-spin" size={20}/> : <Truck size={20}/>} Xác nhận Gửi ảnh
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL XEM LỊCH SỬ ĐƠN HÀNG CỦA KHÁCH --- */}
+      {showOrdersModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white text-slate-900 w-full max-w-2xl rounded-3xl p-6 shadow-2xl relative max-h-[80vh] flex flex-col">
+            <button onClick={() => setShowOrdersModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500"><X size={24}/></button>
+            <h3 className="text-2xl font-black mb-6 flex items-center gap-2 text-pink-600"><Package /> Đơn in ảnh của bạn</h3>
+            <div className="overflow-y-auto custom-scrollbar flex-1 pr-2">
+              {myOrders.length === 0 ? (
+                <p className="text-center text-gray-500 py-10">Bạn chưa có yêu cầu in ảnh nào.</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {myOrders.map(order => (
+                    <div key={order.id} className="border border-gray-100 bg-gray-50 p-4 rounded-2xl flex gap-4 items-start">
+                      <img src={order.image_url} alt="print preview" className="w-20 h-20 object-cover rounded-lg border border-gray-200 shadow-sm" />
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="font-bold text-sm text-gray-800">{new Date(order.created_at).toLocaleDateString('vi-VN')}</p>
+                          <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${order.status === 'pending' ? 'bg-amber-100 text-amber-700' : order.status === 'shipping' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                            {order.status === 'pending' ? 'Chờ duyệt' : order.status === 'shipping' ? 'Đang giao' : 'Đã giao'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mb-1"><strong>Nhận:</strong> {order.customer_name} - {order.phone}</p>
+                        <p className="text-xs text-gray-500 mb-2"><strong>Đ/c:</strong> {order.address}</p>
+                        {order.tracking_code ? (
+                          <div className="bg-white border border-dashed border-blue-300 p-2 rounded-lg inline-block">
+                            <p className="text-xs text-blue-600 font-bold flex items-center gap-1"><Truck size={14}/> Mã Vận Đơn: <span className="font-mono text-sm bg-blue-50 px-1 rounded">{order.tracking_code}</span></p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-amber-600 italic">Đang chờ Admin cung cấp mã vận đơn...</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <FrameComposer
-        photos={photos}
-        layout={layout}
-        theme={theme}
-        isPremium={isPremium}
-        isLoading={isLoadingComposer}
-        onGenerateSuccess={handleComposerSuccess}
-        onGenerateError={handleComposerError}
-        userEmail={user?.email}
-        selectedFilter={selectedFilter}
-        skinSmoothness={skinSmoothness}
+        photos={photos} layout={layout} theme={theme} isPremium={isPremium}
+        isLoading={isLoadingComposer} onGenerateSuccess={handleComposerSuccess}
+        onGenerateError={handleComposerError} userEmail={user?.email}
+        selectedFilter={selectedFilter} skinSmoothness={skinSmoothness}
       />
     </div>
   );
