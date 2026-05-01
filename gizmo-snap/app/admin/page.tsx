@@ -2,39 +2,50 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase";
-import { Truck, CheckCircle, Clock, Package, AlertCircle, Users, Image as ImageIcon, Trash2, ShieldCheck, Crown, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { getDirectDriveLink } from "../page";
 
-export default function AdminDashboard() {
+export default function AdminBios() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminId, setAdminId] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'orders' | 'users' | 'gallery'>('orders');
+  const [activeTab, setActiveTab] = useState<'SYSTEM' | 'ORDERS' | 'USERS' | 'GALLERY'>('SYSTEM');
 
-  // State cho Tab Đơn hàng
   const [orders, setOrders] = useState<any[]>([]);
   const [trackingInput, setTrackingInput] = useState<{ [key: string]: string }>({});
-
-  // State cho Tab User (Cấp/Xóa VIP)
+  
   const [targetEmail, setTargetEmail] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('pro');
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
 
-  // State cho Tab Kho ảnh
   const [gallery, setGallery] = useState<any[]>([]);
+  const [todayCount, setTodayCount] = useState(0);
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [isTogglingMode, setIsTogglingMode] = useState(false);
 
   useEffect(() => { checkAdminAndFetch(); }, []);
 
   const checkAdminAndFetch = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setLoading(false); return; }
+    
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
     if (profile?.role === 'admin') {
       setIsAdmin(true); setAdminId(session.user.id);
-      fetchOrders(); fetchGallery();
+      fetchSystemData(); fetchOrders(); fetchGallery();
     }
     setLoading(false);
+  };
+
+  const fetchSystemData = async () => {
+    // Lấy trạng thái bảo trì
+    const { data: setting } = await supabase.from('site_settings').select('value').eq('id', 'maintenance').single();
+    if (setting) setIsMaintenance(setting.value === 'true');
+
+    // Đếm ảnh hôm nay
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const { count } = await supabase.from('photos').select('*', { count: 'exact', head: true }).gte('created_at', today.toISOString());
+    setTodayCount(count || 0);
   };
 
   const fetchOrders = async () => {
@@ -47,167 +58,189 @@ export default function AdminDashboard() {
     if (data) setGallery(data);
   };
 
-  // --- HÀM TRAO/XÓA GÓI VIP ---
+  // Các hàm xử lý
   const handleUpdateUserPlan = async (e: React.FormEvent) => {
     e.preventDefault(); setIsUpdatingUser(true);
-    // Gọi hàm RPC đã tạo ở Bước 1
-    const { data, error } = await supabase.rpc('admin_update_user_plan', {
-      target_email: targetEmail, new_plan: selectedPlan, admin_id: adminId
-    });
+    const { data, error } = await supabase.rpc('admin_update_user_plan', { target_email: targetEmail, new_plan: selectedPlan, admin_id: adminId });
     setIsUpdatingUser(false);
-    if (error || !data.success) alert("Lỗi: " + (error?.message || data.error));
-    else { alert(`🎉 Đã cấp thành công gói [${selectedPlan.toUpperCase()}] cho email ${targetEmail}!`); setTargetEmail(''); }
+    if (error || !data.success) alert("ERROR: " + (error?.message || data.error));
+    else { alert(`SUCCESS: [${selectedPlan.toUpperCase()}] GRANTED TO ${targetEmail}`); setTargetEmail(''); }
   };
 
-  // --- HÀM XÓA ẢNH PHẢN CẢM ---
   const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa ảnh này khỏi hệ thống?")) return;
-    const { error } = await supabase.from('photos').delete().eq('id', photoId);
-    if (error) alert("Lỗi khi xóa: " + error.message); else fetchGallery();
+    if (!confirm("WARNING: PERMANENTLY DELETE PHOTO?")) return;
+    await supabase.from('photos').delete().eq('id', photoId);
+    fetchGallery(); fetchSystemData();
   };
 
-  // --- HÀM CẬP NHẬT ĐƠN VẬN CHUYỂN ---
   const updateOrderStatus = async (id: string, newStatus: string, trackingCode?: string) => {
     const updateData: any = { status: newStatus }; if (trackingCode) updateData.tracking_code = trackingCode;
-    const { error } = await supabase.from('print_requests').update(updateData).eq('id', id);
-    if (error) alert("Lỗi cập nhật: " + error.message); else fetchOrders();
+    await supabase.from('print_requests').update(updateData).eq('id', id);
+    fetchOrders();
   };
 
-  if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold">Đang kiểm tra quyền...</div>;
+  const toggleMaintenance = async () => {
+    if (!confirm(isMaintenance ? "TURN SYSTEM ONLINE?" : "SUSPEND SYSTEM FOR UPGRADE?")) return;
+    setIsTogglingMode(true);
+    const newVal = isMaintenance ? 'false' : 'true';
+    await supabase.from('site_settings').update({ value: newVal }).eq('id', 'maintenance');
+    setIsMaintenance(newVal === 'true');
+    setIsTogglingMode(false);
+  };
+
+  if (loading) return <div className="min-h-screen bg-black text-[#0f0] flex items-center justify-center font-mono">INITIALIZING...</div>;
   if (!isAdmin) return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-center p-6">
-      <AlertCircle size={64} className="text-red-500 mb-4" />
-      <h1 className="text-2xl font-black text-slate-800 mb-2">Bạn không phải Admin!</h1>
-      <Link href="/" className="bg-pink-500 text-white px-6 py-2 rounded-xl font-bold">Quay lại Trang chủ</Link>
+    <div className="min-h-screen bg-black text-[#0f0] flex flex-col items-center justify-center text-center p-6 font-mono">
+      <h1 className="text-4xl mb-2 animate-pulse">ACCESS DENIED</h1>
+      <p className="mb-6">UNAUTHORIZED PERSONNEL. PLEASE LEAVE.</p>
+      <Link href="/" className="border border-[#0f0] px-6 py-2 hover:bg-[#0f0] hover:text-black transition">RETURN TO PORTAL</Link>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-100 p-8 font-sans">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-3xl shadow-sm border border-gray-200">
-          <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3"><ShieldCheck className="text-emerald-500" size={36}/> Bảng Quản Trị Hệ Thống</h1>
-          <Link href="/" className="text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 px-4 py-2 rounded-xl transition">Thoát Admin</Link>
-        </div>
-
-        {/* TABS MENU */}
-        <div className="flex gap-4 mb-6">
-          <button onClick={() => setActiveTab('orders')} className={`flex items-center gap-2 font-bold px-6 py-3 rounded-2xl transition ${activeTab === 'orders' ? 'bg-amber-500 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-gray-50'}`}><Package size={20}/> Đơn In Ảnh</button>
-          <button onClick={() => setActiveTab('users')} className={`flex items-center gap-2 font-bold px-6 py-3 rounded-2xl transition ${activeTab === 'users' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-gray-50'}`}><Users size={20}/> Trao Quyền VIP</button>
-          <button onClick={() => setActiveTab('gallery')} className={`flex items-center gap-2 font-bold px-6 py-3 rounded-2xl transition ${activeTab === 'gallery' ? 'bg-pink-500 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-gray-50'}`}><ImageIcon size={20}/> Kho Ảnh Chung</button>
-        </div>
-
-        {/* TAB 1: ĐƠN HÀNG */}
-        {activeTab === 'orders' && (
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase">Ảnh in</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase">Khách hàng</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase">Giao hàng</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase">Trạng thái & Mã Vận Đơn</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase text-right">Hành động</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50/50">
-                    <td className="p-4">
-                      <a href={order.image_url} target="_blank" rel="noreferrer">
-                        <img src={getDirectDriveLink(order.image_url)} className="w-24 h-24 object-cover rounded-lg border border-gray-200 shadow-sm" alt="print" />
-                      </a>
-                    </td>
-                    <td className="p-4">
-                      <p className="font-bold text-sm text-slate-800">{order.customer_name}</p>
-                      <p className="text-xs text-gray-500">{order.user_email}</p>
-                      <p className="text-xs font-mono text-gray-400 mt-1">{new Date(order.created_at).toLocaleString('vi-VN')}</p>
-                    </td>
-                    <td className="p-4 max-w-[200px]">
-                      <p className="text-sm font-bold text-slate-700">{order.phone}</p>
-                      <p className="text-xs text-gray-500 truncate whitespace-normal line-clamp-2">{order.address}</p>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-col gap-2">
-                        {order.status === 'pending' && <span className="inline-flex items-center gap-1 w-fit text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-md font-bold"><Clock size={12}/> Chờ xử lý</span>}
-                        {order.status === 'shipping' && <span className="inline-flex items-center gap-1 w-fit text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-bold"><Truck size={12}/> Đang giao</span>}
-                        {order.status === 'completed' && <span className="inline-flex items-center gap-1 w-fit text-xs bg-green-100 text-green-700 px-2 py-1 rounded-md font-bold"><CheckCircle size={12}/> Hoàn thành</span>}
-                        
-                        {order.status !== 'completed' && (
-                          <input type="text" placeholder="Nhập mã (GHTK, SPX...)" className="text-xs p-2 border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 w-48"
-                            value={trackingInput[order.id] !== undefined ? trackingInput[order.id] : (order.tracking_code || '')}
-                            onChange={(e) => setTrackingInput({...trackingInput, [order.id]: e.target.value})} />
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4 text-right">
-                      {order.status === 'pending' && <button onClick={() => updateOrderStatus(order.id, 'shipping', trackingInput[order.id])} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-4 rounded shadow-sm">Gửi hàng</button>}
-                      {order.status === 'shipping' && <button onClick={() => updateOrderStatus(order.id, 'completed', trackingInput[order.id])} className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 px-4 rounded shadow-sm">Hoàn thành</button>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* TAB 2: QUẢN LÝ USER */}
-        {activeTab === 'users' && (
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-200 max-w-2xl mx-auto mt-10">
-            <div className="text-center mb-6">
-              <Crown size={48} className="text-blue-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-black text-slate-800">Trao / Tước Quyền VIP</h2>
-              <p className="text-sm text-gray-500">Nhập chính xác Email của người dùng đã đăng nhập vào hệ thống để thay đổi gói cước của họ.</p>
+    <div className="min-h-screen bg-black text-[#0f0] font-mono p-2 sm:p-6 uppercase selection:bg-[#0f0] selection:text-black text-xs sm:text-sm">
+      <div className="border-4 border-double border-[#0f0] p-1 shadow-[0_0_20px_rgba(0,255,0,0.3)] min-h-[90vh]">
+        <div className="border border-[#0f0] p-4 sm:p-6 h-full flex flex-col">
+          
+          {/* HEADER */}
+          <div className="border-b-2 border-dashed border-[#0f0] pb-4 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-bold tracking-widest text-[#0f0] drop-shadow-[0_0_5px_#0f0]">* GIZMO OS v1.0.0 *</h1>
+              <p className="opacity-80 mt-1">ROOT ACCESS DETECTED // ID: {adminId.split('-')[0]}</p>
             </div>
-            
-            <form onSubmit={handleUpdateUserPlan} className="flex flex-col gap-4">
-              <div>
-                <label className="text-sm font-bold text-slate-700">Email khách hàng:</label>
-                <input required type="email" value={targetEmail} onChange={e => setTargetEmail(e.target.value)} className="w-full mt-2 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="VD: nguyenvan_a@gmail.com" />
-              </div>
-              <div>
-                <label className="text-sm font-bold text-slate-700">Chọn gói cước mới:</label>
-                <select value={selectedPlan} onChange={e => setSelectedPlan(e.target.value)} className="w-full mt-2 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white font-bold text-slate-700">
-                  <option value="free">FREE (Hủy VIP, về 10 lượt/ngày)</option>
-                  <option value="pro">PRO (20 lượt/ngày)</option>
-                  <option value="limitless">LIMITLESS (Không giới hạn)</option>
-                  <option value="exclusive">EXCLUSIVE (Không giới hạn + In ảnh)</option>
-                  <option value="vnu">VNU (50 lượt/ngày)</option>
-                </select>
-              </div>
-              <button disabled={isUpdatingUser} type="submit" className={`w-full py-4 mt-4 rounded-xl text-white font-bold flex justify-center items-center gap-2 ${isUpdatingUser ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                {isUpdatingUser ? <Loader2 className="animate-spin" size={20}/> : <ShieldCheck size={20}/>} Xác nhận Thay đổi
+            <Link href="/" className="border border-[#0f0] px-4 py-1 hover:bg-[#0f0] hover:text-black font-bold">LOGOUT_</Link>
+          </div>
+
+          {/* MENUS */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            {['SYSTEM', 'ORDERS', 'USERS', 'GALLERY'].map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-4 py-2 border border-[#0f0] transition-colors ${activeTab === tab ? 'bg-[#0f0] text-black font-bold' : 'hover:bg-[#0f0]/20'}`}>
+                [{tab}]
               </button>
-            </form>
+            ))}
           </div>
-        )}
 
-        {/* TAB 3: KHO ẢNH CHUNG */}
-        {activeTab === 'gallery' && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {gallery.length === 0 ? (
-              <p className="col-span-full text-center text-gray-500 py-10 font-bold">Chưa có ảnh nào trong kho.</p>
-            ) : (
-              gallery.map(photo => (
-                <div key={photo.id} className="relative group bg-white p-2 rounded-2xl shadow-sm border border-gray-200">
-                  <a href={photo.image_url} target="_blank" rel="noreferrer">
-                    <img src={getDirectDriveLink(photo.image_url)} alt="gallery" className="w-full aspect-square object-cover rounded-xl" />
-                  </a>
-                  <div className="mt-3 px-2 pb-2">
-                    <p className="text-xs font-bold text-slate-700 truncate" title={photo.user_email}>{photo.user_email}</p>
-                    <p className="text-[10px] text-gray-400">{new Date(photo.created_at).toLocaleDateString('vi-VN')}</p>
+          {/* MAIN CONTENT AREA */}
+          <div className="flex-1 bg-black p-4 border border-[#0f0]/50 overflow-y-auto">
+            
+            {/* TAB SYSTEM */}
+            {activeTab === 'SYSTEM' && (
+              <div className="space-y-6">
+                <p className="animate-pulse mb-4">_SYSTEM_OVERVIEW</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="border border-[#0f0] p-4">
+                    <h3 className="mb-2 border-b border-[#0f0] pb-2">DATA_METRICS</h3>
+                    <p>TOTAL PHOTOS IN DB: {gallery.length}</p>
+                    <p className="text-white bg-[#0f0]/20 p-1 my-2 inline-block">PHOTOS TAKEN TODAY: {todayCount}</p>
+                    <p>PENDING PRINT ORDERS: {orders.filter(o => o.status === 'pending').length}</p>
                   </div>
-                  {/* Nút Xóa hiện lên khi Hover */}
-                  <button onClick={() => handleDeletePhoto(photo.id)} className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-lg">
-                    <Trash2 size={16} />
-                  </button>
+                  
+                  <div className="border border-[#0f0] p-4">
+                    <h3 className="mb-2 border-b border-[#0f0] pb-2">CORE_COMMANDS</h3>
+                    <div className="mb-2">CURRENT STATUS: {isMaintenance ? <span className="text-red-500 font-bold blink">SUSPENDED</span> : <span className="text-green-500 font-bold">ONLINE</span>}</div>
+                    <button disabled={isTogglingMode} onClick={toggleMaintenance} className={`border border-[#0f0] px-4 py-2 w-full font-bold transition-colors ${isMaintenance ? 'hover:bg-[#0f0] hover:text-black' : 'hover:bg-red-500 hover:border-red-500 hover:text-black'}`}>
+                      {isTogglingMode ? 'EXECUTING...' : (isMaintenance ? '> REBOOT SYSTEM ONLINE' : '> INITIATE MAINTENANCE MODE')}
+                    </button>
+                  </div>
                 </div>
-              ))
+              </div>
             )}
-          </div>
-        )}
 
+            {/* TAB ORDERS */}
+            {activeTab === 'ORDERS' && (
+              <div>
+                 <p className="mb-4">_PRINT_REQUESTS_LOG</p>
+                 <div className="overflow-x-auto">
+                   <table className="w-full text-left border-collapse border border-[#0f0]">
+                     <thead>
+                       <tr className="border-b border-[#0f0] bg-[#0f0]/10">
+                         <th className="p-2 border-r border-[#0f0]">IMG</th>
+                         <th className="p-2 border-r border-[#0f0]">TARGET</th>
+                         <th className="p-2 border-r border-[#0f0]">DESTINATION</th>
+                         <th className="p-2 border-r border-[#0f0]">TRACKING</th>
+                         <th className="p-2">CMD</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {orders.map(order => (
+                         <tr key={order.id} className="border-b border-[#0f0]/30 hover:bg-[#0f0]/5">
+                           <td className="p-2 border-r border-[#0f0]"><a href={order.image_url} target="_blank" rel="noreferrer"><img src={getDirectDriveLink(order.image_url)} className="w-16 h-16 object-cover border border-[#0f0]" alt="img"/></a></td>
+                           <td className="p-2 border-r border-[#0f0]"><div className="font-bold">{order.customer_name}</div><div className="opacity-70 text-[10px]">{order.user_email}</div></td>
+                           <td className="p-2 border-r border-[#0f0]"><div className="text-[10px]">{order.phone}</div><div className="text-[10px] line-clamp-2">{order.address}</div></td>
+                           <td className="p-2 border-r border-[#0f0]">
+                             {order.status === 'pending' && <span className="bg-yellow-600/30 text-yellow-500 p-1">PENDING</span>}
+                             {order.status === 'shipping' && <span className="bg-blue-600/30 text-blue-500 p-1">SHIPPED</span>}
+                             {order.status === 'completed' && <span className="bg-green-600/30 text-green-500 p-1">DONE</span>}
+                             {order.status !== 'completed' && (
+                               <input type="text" placeholder="TRACKING#" className="w-full bg-black border border-[#0f0] mt-2 p-1 focus:outline-none focus:bg-[#0f0]/10" value={trackingInput[order.id] !== undefined ? trackingInput[order.id] : (order.tracking_code || '')} onChange={e => setTrackingInput({...trackingInput, [order.id]: e.target.value})} />
+                             )}
+                           </td>
+                           <td className="p-2 text-right">
+                             {order.status === 'pending' && <button onClick={() => updateOrderStatus(order.id, 'shipping', trackingInput[order.id])} className="border border-[#0f0] px-2 py-1 hover:bg-[#0f0] hover:text-black">DISPATCH</button>}
+                             {order.status === 'shipping' && <button onClick={() => updateOrderStatus(order.id, 'completed', trackingInput[order.id])} className="border border-[#0f0] px-2 py-1 hover:bg-[#0f0] hover:text-black">FINISH</button>}
+                           </td>
+                         </tr>
+                       ))}
+                     </tbody>
+                   </table>
+                 </div>
+              </div>
+            )}
+
+            {/* TAB USERS */}
+            {activeTab === 'USERS' && (
+              <div className="max-w-md mx-auto mt-8 border border-[#0f0] p-6 shadow-[5px_5px_0_#0f0]">
+                <h2 className="text-xl mb-4 border-b border-[#0f0] pb-2 text-center">OVERRIDE USER PRIVILEGE</h2>
+                <form onSubmit={handleUpdateUserPlan} className="flex flex-col gap-4">
+                  <div>
+                    <label className="block mb-1 opacity-80">> TARGET_EMAIL:</label>
+                    <input required type="email" value={targetEmail} onChange={e => setTargetEmail(e.target.value)} className="w-full bg-black border border-[#0f0] p-2 focus:outline-none focus:bg-[#0f0]/10" placeholder="user@domain.com" />
+                  </div>
+                  <div>
+                    <label className="block mb-1 opacity-80">> NEW_CLEARANCE_LEVEL:</label>
+                    <select value={selectedPlan} onChange={e => setSelectedPlan(e.target.value)} className="w-full bg-black border border-[#0f0] p-2 focus:outline-none">
+                      <option value="free">L0: FREE_TIER [REVOKE VIP]</option>
+                      <option value="pro">L1: PRO_TIER</option>
+                      <option value="limitless">L2: LIMITLESS_TIER</option>
+                      <option value="exclusive">L3: EXCLUSIVE_TIER</option>
+                      <option value="vnu">SP: VNU_STUDENT</option>
+                    </select>
+                  </div>
+                  <button disabled={isUpdatingUser} type="submit" className={`w-full py-3 mt-4 border border-[#0f0] font-bold ${isUpdatingUser ? 'opacity-50' : 'hover:bg-[#0f0] hover:text-black transition-colors'}`}>
+                    {isUpdatingUser ? 'EXECUTING...' : 'EXECUTE_OVERRIDE()'}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* TAB GALLERY */}
+            {activeTab === 'GALLERY' && (
+               <div>
+                 <p className="mb-4">_GLOBAL_IMAGE_REPOSITORY</p>
+                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                   {gallery.map(photo => (
+                     <div key={photo.id} className="border border-[#0f0] p-1 relative group bg-black hover:bg-[#0f0]/10 transition-colors">
+                       <a href={photo.image_url} target="_blank" rel="noreferrer"><img src={getDirectDriveLink(photo.image_url)} alt="db" className="w-full aspect-square object-cover grayscale group-hover:grayscale-0 transition-all"/></a>
+                       <div className="text-[10px] mt-1 truncate px-1">{photo.user_email}</div>
+                       <button onClick={() => handleDeletePhoto(photo.id)} className="absolute top-2 right-2 bg-black border border-[#0f0] text-red-500 px-2 py-1 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-black">DEL</button>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+            )}
+
+          </div>
+          {/* FOOTER */}
+          <div className="mt-4 pt-2 border-t-2 border-dashed border-[#0f0] flex justify-between text-[10px] opacity-70">
+             <span>SYS_TIME: {new Date().toISOString()}</span>
+             <span>GIZMO_DB_CONNECTED</span>
+          </div>
+        </div>
       </div>
+      <style dangerouslySetInlineStyle={{__html: `
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+      `}} />
     </div>
   );
 }

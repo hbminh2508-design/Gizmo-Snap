@@ -44,6 +44,7 @@ export default function Photobooth() {
   const [isSubmittingPrint, setIsSubmittingPrint] = useState(false);
   const [myOrders, setMyOrders] = useState<any[]>([]);
   const [showOrdersModal, setShowOrdersModal] = useState(false);
+  const [isMaintenance, setIsMaintenance] = useState(false);
 
   const isPremium = ['pro', 'limitless', 'exclusive', 'vnu'].includes(profile?.plan);
   const maxPhotosMap: Record<FrameLayout, number> = { '2x2': 4, 'strip3': 3, 'strip4': 4, 'polaroid': 1, 'film': 3, 'grid6': 6 };
@@ -51,6 +52,10 @@ export default function Photobooth() {
 
   useEffect(() => {
     const getSession = async () => {
+      // KIỂM TRA BẢO TRÌ TRƯỚC
+      const { data: setting } = await supabase.from('site_settings').select('value').eq('id', 'maintenance').single();
+      if (setting?.value === 'true') setIsMaintenance(true);
+
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       if (session?.user) fetchProfile(session.user);
@@ -181,6 +186,18 @@ export default function Photobooth() {
     if (type === 'layout') setLayout(id as FrameLayout); else setTheme(id as FrameTheme);
   };
 
+  // --- THÊM MÀN HÌNH BẢO TRÌ VÀO ĐÂY ---
+  if (isMaintenance && profile?.role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center text-center p-6 selection:bg-pink-500">
+        <Sparkles size={64} className="text-pink-500 mb-6 animate-pulse" />
+        <h1 className="text-4xl font-black mb-4">Bảo Trì Hệ Thống</h1>
+        <p className="text-gray-400 max-w-lg mb-8 text-lg">Gizmo Snap đang được nâng cấp để mang lại trải nghiệm mượt mà hơn. Vui lòng quay lại sau ít phút nhé!</p>
+        {user ? <button onClick={logout} className="text-sm bg-white/10 px-4 py-2 rounded-xl">Đăng xuất</button> : <button onClick={loginWithGoogle} className="text-sm bg-white/10 px-4 py-2 rounded-xl">Đăng nhập Admin</button>}
+      </div>
+    );
+  }
+  // -------------------------------------
   return (
     <div className="flex flex-col items-center min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6 font-sans selection:bg-pink-500 selection:text-white">
       {isFlashing && <div className="fixed inset-0 bg-white z-[9999] opacity-100 transition-opacity duration-300 mix-blend-screen pointer-events-none" />}
