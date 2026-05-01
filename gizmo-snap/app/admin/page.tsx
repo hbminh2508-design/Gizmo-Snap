@@ -12,28 +12,24 @@ export default function AdminBios() {
   const [adminId, setAdminId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'SYSTEM' | 'ORDERS' | 'USERS' | 'GALLERY'>('SYSTEM');
 
-  // Dữ liệu chung
   const [orders, setOrders] = useState<any[]>([]);
   const [trackingInput, setTrackingInput] = useState<{ [key: string]: string }>({});
+  
   const [gallery, setGallery] = useState<any[]>([]);
   const [todayCount, setTodayCount] = useState(0);
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [isTogglingMode, setIsTogglingMode] = useState(false);
 
-  // --- DỮ LIỆU TAB USERS MỚI ---
   const [userList, setUserList] = useState<any[]>([]);
   const [targetEmail, setTargetEmail] = useState('');
   
-  // States cho Form Tặng Gói có thời hạn
   const [selectedPlan, setSelectedPlan] = useState('pro');
   const [giftHours, setGiftHours] = useState('24');
   const [isGiftingPlan, setIsGiftingPlan] = useState(false);
 
-  // States cho Form Tặng Lượt chụp
   const [giftShoots, setGiftShoots] = useState('10');
   const [isGiftingShoots, setIsGiftingShoots] = useState(false);
 
-  // States cho Quản lý Admin
   const [isSettingRole, setIsSettingRole] = useState(false);
 
   useEffect(() => { checkAdminAndFetch(); }, []);
@@ -61,7 +57,6 @@ export default function AdminBios() {
   const fetchOrders = async () => { const { data } = await supabase.from('print_requests').select('*').order('created_at', { ascending: false }); if (data) setOrders(data); };
   const fetchGallery = async () => { const { data } = await supabase.from('photos').select('*').order('created_at', { ascending: false }); if (data) setGallery(data); };
   
-  // Lấy toàn bộ User từ hàm RPC
   const fetchUserList = async (id: string) => {
     const { data, error } = await supabase.rpc('get_all_users_for_admin', { admin_uuid: id });
     if (!error && data) setUserList(data);
@@ -85,7 +80,6 @@ export default function AdminBios() {
     setIsMaintenance(newVal === 'true'); setIsTogglingMode(false);
   };
 
-  // --- CÁC HÀM XỬ LÝ USER COMMANDS ---
   const handleGiftTempPlan = async (e: React.FormEvent) => {
     e.preventDefault(); setIsGiftingPlan(true);
     const { data, error } = await supabase.rpc('admin_gift_plan_temp', { target_email: targetEmail, new_plan: selectedPlan, duration_hours: parseInt(giftHours), admin_id: adminId });
@@ -171,13 +165,14 @@ export default function AdminBios() {
               </div>
             )}
 
-            {/* TAB USERS (NÂNG CẤP TOÀN DIỆN) */}
+            {/* TAB USERS */}
             {activeTab === 'USERS' && (
               <div className="flex flex-col gap-6 h-full">
                 {/* NỬA TRÊN: BẢNG DANH SÁCH USER */}
                 <div className="border border-[#0f0] flex flex-col max-h-[50vh]">
                   <h3 className="bg-[#0f0]/20 p-2 font-bold flex justify-between">
-                    <span>> REGISTERED_USER_DATABASE</span>
+                    {/* ĐÃ FIX DẤU > Ở ĐÂY */}
+                    <span>{'>'} REGISTERED_USER_DATABASE</span>
                     <span>TOTAL: {userList.length}</span>
                   </h3>
                   <div className="overflow-y-auto overflow-x-auto custom-scrollbar p-2">
@@ -210,16 +205,16 @@ export default function AdminBios() {
 
                 {/* NỬA DƯỚI: TERMINAL ĐIỀU KHIỂN */}
                 <div className="border border-[#0f0] p-4 bg-[#0f0]/5">
-                  <h3 className="mb-4 text-center font-bold">> TERMINAL COMMAND: OVERRIDE PRIVILEGES</h3>
+                  {/* ĐÃ FIX DẤU > Ở ĐÂY */}
+                  <h3 className="mb-4 text-center font-bold">{'>'} TERMINAL COMMAND: OVERRIDE PRIVILEGES</h3>
                   
-                  {/* Ô nhập Email chung cho mọi lệnh */}
                   <div className="mb-6 bg-black p-3 border border-[#0f0] flex flex-col md:flex-row items-center gap-4">
                     <label className="whitespace-nowrap font-bold text-yellow-400">TARGET_EMAIL:</label>
                     <input type="email" value={targetEmail} onChange={e => setTargetEmail(e.target.value)} className="w-full bg-transparent border-b border-[#0f0]/50 focus:outline-none focus:border-[#0f0] text-white" placeholder="Select from list or type..." />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Lệnh 1: Tặng gói thời gian */}
+                    {/* Lệnh 1 */}
                     <form onSubmit={handleGiftTempPlan} className="border border-[#0f0]/50 p-4">
                       <p className="mb-3 text-pink-400 font-bold"># CMD 1: GRANT_VIP_PLAN</p>
                       <select value={selectedPlan} onChange={e => setSelectedPlan(e.target.value)} className="w-full bg-black border border-[#0f0] p-2 mb-3 outline-none">
@@ -230,20 +225,24 @@ export default function AdminBios() {
                         <span className="opacity-70">HOURS:</span>
                         <input type="number" min="1" value={giftHours} onChange={e => setGiftHours(e.target.value)} className="w-full bg-black border border-[#0f0] p-1 text-center outline-none" />
                       </div>
-                      <button disabled={isGiftingPlan || !targetEmail} type="submit" className="w-full border border-[#0f0] hover:bg-[#0f0] hover:text-black py-1">EXECUTE</button>
+                      <button disabled={isGiftingPlan || !targetEmail} type="submit" className="w-full border border-[#0f0] hover:bg-[#0f0] hover:text-black py-1">
+                        {isGiftingPlan ? <Loader2 className="animate-spin mx-auto" size={20}/> : 'EXECUTE'}
+                      </button>
                     </form>
 
-                    {/* Lệnh 2: Tặng lượt chụp */}
+                    {/* Lệnh 2 */}
                     <form onSubmit={handleGiftShoots} className="border border-[#0f0]/50 p-4">
                       <p className="mb-3 text-cyan-400 font-bold"># CMD 2: ADD_SHOOTS</p>
                       <div className="flex items-center gap-2 mb-3">
                         <span className="opacity-70">AMOUNT:</span>
                         <input type="number" min="1" value={giftShoots} onChange={e => setGiftShoots(e.target.value)} className="w-full bg-black border border-[#0f0] p-1 text-center outline-none" />
                       </div>
-                      <button disabled={isGiftingShoots || !targetEmail} type="submit" className="w-full mt-[42px] border border-[#0f0] hover:bg-[#0f0] hover:text-black py-1">EXECUTE</button>
+                      <button disabled={isGiftingShoots || !targetEmail} type="submit" className="w-full mt-[42px] border border-[#0f0] hover:bg-[#0f0] hover:text-black py-1">
+                        {isGiftingShoots ? <Loader2 className="animate-spin mx-auto" size={20}/> : 'EXECUTE'}
+                      </button>
                     </form>
 
-                    {/* Lệnh 3: Quản lý Admin */}
+                    {/* Lệnh 3 */}
                     <div className="border border-[#0f0]/50 p-4 flex flex-col justify-between">
                       <p className="mb-3 text-red-400 font-bold"># CMD 3: MANAGE_ADMIN</p>
                       <div className="flex gap-2 mt-[42px]">
@@ -256,7 +255,7 @@ export default function AdminBios() {
               </div>
             )}
 
-            {/* TAB ORDERS (Không thay đổi) */}
+            {/* TAB ORDERS */}
             {activeTab === 'ORDERS' && (
               <div>
                  <p className="mb-4">_PRINT_REQUESTS_LOG</p>
@@ -289,7 +288,7 @@ export default function AdminBios() {
               </div>
             )}
 
-            {/* TAB GALLERY (Không thay đổi) */}
+            {/* TAB GALLERY */}
             {activeTab === 'GALLERY' && (
                <div>
                  <p className="mb-4">_GLOBAL_IMAGE_REPOSITORY</p>
