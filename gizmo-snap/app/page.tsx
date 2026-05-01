@@ -4,15 +4,12 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { supabase } from "@/utils/supabase";
 import { QRCodeCanvas } from "qrcode.react";
 import Link from "next/link";
-import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Crown, Bug, ShieldAlert, LayoutGrid, Smartphone, Palette, ArrowRight, Lock, Wand2 } from "lucide-react";
-// NHÚNG BỘ VẼ VECTOR VÀO GIAO DIỆN CHÍNH
+import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Crown, Bug, LayoutGrid, Palette, ArrowRight, Lock, Wand2 } from "lucide-react";
 import FrameComposer from "@/components/FrameComposer";
 
 type FrameLayout = '2x2' | 'strip3' | 'strip4' | 'polaroid' | 'film' | 'grid6';
-// ĐÃ FIX: Thêm wedding, neon, retro vào khai báo kiểu dữ liệu để TypeScript không báo lỗi
-type FrameTheme = 'dark' | 'pink' | 'cyberpunk' | 'spiderman' | '30_4' | 'vietnam' | 'hello_kitty' | 'wedding' | 'neon' | 'retro';
-
-// Định nghĩa kiểu cho Filter
+// ĐÃ FIX: Danh sách 21 Theme Siêu Phẩm
+type FrameTheme = 'dark' | 'pink' | 'hello_kitty' | 'minimal' | 'ocean' | 'sunset' | 'pastel' | 'nature' | 'y2k' | 'wedding' | 'neon' | 'retro' | 'spiderman' | '30_4' | 'vietnam' | 'golden' | 'cyberpunk' | 'newspaper' | 'kawaii' | 'gothic' | 'holo';
 type ImageFilter = 'none' | 'sepia' | 'grayscale' | 'vintage' | 'brighten' | 'cool';
 
 export default function Photobooth() {
@@ -20,7 +17,7 @@ export default function Photobooth() {
   
   const [step, setStep] = useState<number>(1);
   const [layout, setLayout] = useState<FrameLayout>('2x2');
-  const [theme, setTheme] = useState<FrameTheme>('dark');
+  const [theme, setTheme] = useState<FrameTheme>('minimal');
   
   const [photos, setPhotos] = useState<string[]>([]);
   const [hasDecremented, setHasDecremented] = useState<boolean>(false);
@@ -36,17 +33,12 @@ export default function Photobooth() {
 
   const [qrLink, setQrLink] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
-  
-  // STATE KÍCH HOẠT BỘ VẼ VECTOR
   const [isLoadingComposer, setIsLoadingComposer] = useState<boolean>(false);
 
-  // --- STATE CHO FILTER & CÀ DA ( SMOOTHING ) ---
   const [selectedFilter, setSelectedFilter] = useState<ImageFilter>('none');
-  const [skinSmoothness, setSkinSmoothness] = useState<number>(50); // Mức độ cà da (0-100)
+  const [skinSmoothness, setSkinSmoothness] = useState<number>(50);
 
-  // Kiểm tra quyền Premium
   const isPremium = profile?.plan === 'pro' || profile?.plan === 'limitless' || profile?.plan === 'exclusive';
-
   const maxPhotosMap: Record<FrameLayout, number> = { '2x2': 4, 'strip3': 3, 'strip4': 4, 'polaroid': 1, 'film': 3, 'grid6': 6 };
   const maxPhotos = maxPhotosMap[layout];
 
@@ -89,14 +81,14 @@ export default function Photobooth() {
 
   useEffect(() => {
     const autoDecrement = async () => {
-      if (photos.length === maxPhotos && !hasDecremented && user && profile?.plan !== 'exclusive' && profile?.plan !== 'limitless') {
+      if (photos.length === maxPhotos && !hasDecremented && user && !isPremium) {
         setHasDecremented(true);
         setProfile((prev: any) => ({ ...prev, daily_shoots: prev.daily_shoots - 1 }));
         await supabase.rpc('decrement_daily_shoots', { user_id: user.id });
       }
     };
     autoDecrement();
-  }, [photos.length, hasDecremented, user, profile, maxPhotos]);
+  }, [photos.length, hasDecremented, user, profile, maxPhotos, isPremium]);
 
   const captureWithFlash = useCallback(async () => {
     setIsFlashing(true);
@@ -165,23 +157,14 @@ export default function Photobooth() {
     } catch (err: any) { alert("Lỗi kết nối: " + err.message); } finally { setIsUploading(false); setIsLoadingComposer(false); }
   };
 
-  // KHI BẤM NÚT SẼ BẬT CÔNG TẮC CHO FRAME_COMPOSER CHẠY
   const handleGenerateClick = () => {
     if (!user) { alert("Vui lòng đăng nhập!"); return; }
     setIsLoadingComposer(true);
   };
 
-  // NHẬN ẢNH VECTOR ĐÃ VẼ XONG TỪ COMPOSER VÀ UPLOAD
-  const handleComposerSuccess = (base64Image: string) => {
-    uploadToDrive(base64Image);
-  };
+  const handleComposerSuccess = (base64Image: string) => uploadToDrive(base64Image);
+  const handleComposerError = (err: any) => { setIsLoadingComposer(false); alert("Lỗi vẽ: " + err.message); };
 
-  const handleComposerError = (err: any) => {
-    setIsLoadingComposer(false);
-    alert("Lỗi khi vẽ khung Vector: " + err.message);
-  };
-
-  // UI Dữ liệu
   const layouts = [
     { id: '2x2', name: 'Lưới 2x2', desc: '4 ảnh vuông', prem: false },
     { id: 'strip3', name: 'Dải 3 ảnh', desc: 'Dọc cổ điển', prem: false },
@@ -191,25 +174,34 @@ export default function Photobooth() {
     { id: 'grid6', name: 'Lưới 3x2', desc: '6 ảnh (PRO+)', prem: true },
   ];
   
+  // TỔNG HỢP 21 THEMES SIÊU ĐẸP
   const themes = [
-    { id: 'dark', name: 'Dark Classic', prem: false, color: 'bg-slate-900 border-gray-600' },
-    { id: 'pink', name: 'Pinky Cute', prem: false, color: 'bg-pink-100 border-pink-400 text-pink-900' },
+    // --- 9 THEME MIỄN PHÍ TỐI ƯU ---
+    { id: 'minimal', name: 'Minimal White', prem: false, color: 'bg-white border-gray-300 text-gray-800 shadow-md' },
+    { id: 'dark', name: 'Dark Classic', prem: false, color: 'bg-slate-900 border-slate-700 text-slate-300' },
+    { id: 'pink', name: 'Pinky Cute', prem: false, color: 'bg-pink-50 border-pink-300 text-pink-600' },
+    { id: 'ocean', name: 'Ocean Breeze', prem: false, color: 'bg-sky-100 border-sky-400 text-sky-800' },
+    { id: 'sunset', name: 'Sunset Glow', prem: false, color: 'bg-orange-100 border-orange-400 text-orange-800' },
+    { id: 'pastel', name: 'Pastel Dream', prem: false, color: 'bg-purple-100 border-purple-300 text-purple-700' },
+    { id: 'nature', name: 'Botanical', prem: false, color: 'bg-green-100 border-green-400 text-green-800' },
+    { id: 'y2k', name: 'Y2K Cyber', prem: false, color: 'bg-zinc-200 border-zinc-400 text-zinc-900' },
     { id: 'hello_kitty', name: 'Hello Kitty', prem: false, color: 'bg-pink-200 border-pink-500 text-pink-800 shadow-[0_0_10px_#f472b6]' },
+
+    // --- 12 THEME VIP ĐẲNG CẤP ---
+    { id: 'golden', name: 'Golden Hour', prem: true, color: 'bg-yellow-900 border-yellow-400 text-yellow-200 shadow-[0_0_15px_#facc15]' },
+    { id: 'wedding', name: 'Royal Wedding', prem: true, color: 'bg-slate-50 border-amber-300 text-amber-700 shadow-[0_0_15px_#fcd34d]' },
+    { id: 'holo', name: 'Holographic', prem: true, color: 'bg-gradient-to-r from-pink-300 via-purple-300 to-cyan-300 border-white text-white' },
+    { id: 'neon', name: 'Neon Party', prem: true, color: 'bg-black border-cyan-400 text-fuchsia-400 shadow-[0_0_20px_#22d3ee]' },
+    { id: 'cyberpunk', name: 'Cyberpunk City', prem: true, color: 'bg-fuchsia-950 border-cyan-400 text-cyan-200' },
+    { id: 'retro', name: 'Vintage Film', prem: true, color: 'bg-[#d4c5b0] border-[#3e2723] text-[#4e342e]' },
+    { id: 'newspaper', name: 'Daily News', prem: true, color: 'bg-gray-200 border-black text-black font-serif' },
+    { id: 'kawaii', name: 'Kawaii Magic', prem: true, color: 'bg-pink-300 border-yellow-400 text-white shadow-[0_0_15px_#f472b6]' },
+    { id: 'gothic', name: 'Dark Gothic', prem: true, color: 'bg-red-950 border-red-600 text-red-200' },
     { id: 'spiderman', name: 'Spider-Verse', prem: true, color: 'bg-red-700 border-blue-600 text-yellow-300' },
     { id: '30_4', name: 'Đại Thắng 30/4', prem: true, color: 'bg-red-800 border-yellow-400 text-yellow-200' },
     { id: 'vietnam', name: 'Tự Hào VN', prem: true, color: 'bg-red-900 border-yellow-500 text-yellow-400' },
-    // 3 THEME MỚI ĐẲNG CẤP VIP
-    { id: 'wedding', name: 'Royal Wedding', prem: true, color: 'bg-slate-50 border-amber-300 text-amber-700 shadow-[0_0_15px_#fcd34d]' },
-    { id: 'neon', name: 'Neon Party', prem: true, color: 'bg-black border-cyan-400 text-fuchsia-400 shadow-[0_0_20px_#22d3ee]' },
-    { id: 'retro', name: 'Vintage Film', prem: true, color: 'bg-[#d4c5b0] border-[#3e2723] text-[#4e342e]' },
   ];
 
-  const handleSelect = (type: 'layout'|'theme', id: string, prem: boolean) => {
-    if (prem && !isPremium) { alert("Gói FREE không thể dùng tính năng này. Hãy nâng cấp VIP nhé!"); return; }
-    if (type === 'layout') setLayout(id as FrameLayout); else setTheme(id as FrameTheme);
-  };
-
-  // UI Dữ liệu cho Filter
   const filters: { id: ImageFilter; name: string; css: string }[] = [
     { id: 'none', name: 'Gốc', css: '' },
     { id: 'sepia', name: 'Sepia', css: 'sepia(0.8)' },
@@ -218,6 +210,11 @@ export default function Photobooth() {
     { id: 'brighten', name: 'Sáng', css: 'brightness(1.2) contrast(1.1)' },
     { id: 'cool', name: 'Lạnh', css: 'hue-rotate(10deg) saturate(1.2)' },
   ];
+
+  const handleSelect = (type: 'layout'|'theme', id: string, prem: boolean) => {
+    if (prem && !isPremium) { alert("Gói FREE không thể dùng tính năng này. Hãy nâng cấp VIP nhé!"); return; }
+    if (type === 'layout') setLayout(id as FrameLayout); else setTheme(id as FrameTheme);
+  };
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6 font-sans selection:bg-pink-500 selection:text-white">
@@ -253,11 +250,9 @@ export default function Photobooth() {
         )}
       </div>
 
-      {/* --- MÀN HÌNH BƯỚC 1: SETUP KHUNG ẢNH --- */}
+      {/* --- MÀN HÌNH BƯỚC 1 --- */}
       {step === 1 && (
         <div className="flex flex-col lg:flex-row gap-8 w-full max-w-7xl items-stretch animate-in fade-in zoom-in duration-500">
-          
-          {/* Bảng chọn bên trái */}
           <div className="flex-1 bg-white/5 backdrop-blur-md p-8 rounded-3xl border border-white/10 shadow-2xl">
             <h2 className="text-3xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-violet-400">Tùy Chỉnh Khung & Theme</h2>
             
@@ -275,8 +270,9 @@ export default function Photobooth() {
             </div>
 
             <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200"><Palette size={20} className="text-violet-400"/> Chọn Phong Cách Độc Quyền</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200"><Palette size={20} className="text-violet-400"/> Chọn Phong Cách Độc Quyền (21 Themes)</h3>
+              {/* Phân tách rõ ràng giữa Free và VIP */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {themes.map((item) => (
                   <button key={item.id} onClick={() => handleSelect('theme', item.id, item.prem)} className={`p-3 rounded-2xl border-2 transition-all flex items-center justify-between font-bold text-sm ${item.color} ${theme === item.id ? 'ring-4 ring-white ring-offset-2 ring-offset-slate-900 scale-105 z-10' : 'opacity-80 hover:opacity-100'}`}>
                     {item.name} {item.prem && <Lock size={14} className="opacity-80" />}
@@ -285,17 +281,15 @@ export default function Photobooth() {
               </div>
             </div>
 
-            <button onClick={() => { if(!user) { alert("Đăng nhập để chụp!"); return; } setStep(2); resetBooth(); }} className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 to-violet-500 text-white font-bold py-4 rounded-2xl shadow-xl transform transition hover:scale-[1.02] text-lg">
+            <button onClick={() => { if(!user) { alert("Đăng nhập để chụp!"); return; } setStep(2); resetBooth(); }} className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 to-violet-500 text-white font-bold py-4 rounded-2xl shadow-xl transform transition hover:scale-[1.02] text-lg mt-4">
               Vào bốt chụp <ArrowRight size={24} />
             </button>
           </div>
 
-          {/* Màn hình Nháp CSS bên phải (image_14.png - ĐÃ TỐI ƯU HÓA) */}
           <div className="w-full lg:w-[400px] bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center relative">
              <h3 className="text-lg font-semibold mb-6 text-gray-300">Xem trước CSS (Bản nháp)</h3>
              <div className={`transition-all duration-500 rounded-xl p-4 flex flex-col items-center shadow-2xl ${themes.find(t => t.id === theme)?.color} w-[260px] h-[340px] max-h-[400px]`}>
                 <h4 className="font-black text-xl mb-4 text-center tracking-wider">{theme.toUpperCase()}</h4>
-                
                 <div className={`grid gap-2 w-full ${layout === '2x2' || layout === 'grid6' ? 'grid-cols-2' : layout === 'film' ? 'grid-cols-3' : 'grid-cols-1'}`}>
                    {[...Array(maxPhotosMap[layout])].map((_, i) => (
                      <div key={i} className="bg-black/50 w-full aspect-video rounded border border-white/30 flex items-center justify-center">
@@ -304,7 +298,6 @@ export default function Photobooth() {
                    ))}
                 </div>
              </div>
-             {/* ĐÃ DI CHUYỂN VÀ LÀM NGẮN VĂN BẢN (image_14.png - ĐÃ FIX) */}
              <div className="text-xs text-gray-400 mt-6 text-center px-4 w-full">
                 Vector nghệ thuật siêu chi tiết sẽ được tự động vẽ ra sau khi bạn chụp ở Bước 2.
              </div>
@@ -312,11 +305,9 @@ export default function Photobooth() {
         </div>
       )}
 
-      {/* --- MÀN HÌNH BƯỚC 2: CHỤP ẢNH --- */}
+      {/* --- MÀN HÌNH BƯỚC 2 --- */}
       {step === 2 && (
         <div className="flex flex-col xl:flex-row gap-8 w-full max-w-7xl justify-center items-start animate-in slide-in-from-right-10 fade-in duration-500">
-          
-          {/* CỘT TRÁI: CAMERA */}
           <div className="flex flex-col items-center bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex-1 w-full">
             <div className="flex justify-between w-full mb-4">
                <button onClick={() => { setStep(1); stopAutoShoot(); }} className="text-sm text-gray-400 hover:text-white flex items-center gap-1 bg-white/5 px-3 py-1 rounded-lg transition"><ArrowRight className="rotate-180" size={16}/> Đổi khung</button>
@@ -331,7 +322,6 @@ export default function Photobooth() {
               {countdown !== null && countdown > 0 && <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm z-10"><span className="text-7xl md:text-9xl font-black text-white drop-shadow-[0_0_30px_rgba(236,72,153,0.8)] animate-pulse">{countdown}</span></div>}
             </div>
 
-            {/* --- BẢNG ĐIỀU KHIỂN FILTER & CÀ DA --- */}
             <div className="flex flex-col gap-4 w-full max-w-[640px] bg-slate-800/80 backdrop-blur-sm p-5 rounded-[2rem] border border-white/10 shadow-2xl mb-6">
               <h3 className="text-lg font-bold flex items-center gap-2 text-pink-400"><Wand2 size={20}/> Bộ lọc & Cà da</h3>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -342,9 +332,9 @@ export default function Photobooth() {
                 ))}
               </div>
               <div className="w-full flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/10">
-                <label className="text-xs font-semibold text-gray-300">Cà da</label>
+                <label className="text-xs font-semibold text-gray-300 whitespace-nowrap">Cà da</label>
                 <input type="range" min="0" max="100" value={skinSmoothness} onChange={(e) => setSkinSmoothness(Number(e.target.value))} className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-pink-500" />
-                <span className="text-xs font-mono text-gray-400 min-w-[40px]">{skinSmoothness}%</span>
+                <span className="text-xs font-mono text-gray-400 min-w-[40px] text-right">{skinSmoothness}%</span>
               </div>
             </div>
 
@@ -366,7 +356,6 @@ export default function Photobooth() {
             </div>
           </div>
 
-          {/* CỘT PHẢI: PREVIEW ẢNH ĐÃ CHỤP & RENDER VECTOR */}
           <div className="flex flex-col items-center bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl shrink-0 w-full xl:min-w-[360px] xl:w-auto">
             <h2 className="text-xl font-bold mb-4 text-gray-200 flex items-center gap-2">Nháp Khung {layout.toUpperCase()}</h2>
             
@@ -378,14 +367,12 @@ export default function Photobooth() {
               ))}
             </div>
 
-            {/* NÚT KÍCH HOẠT VẼ VECTOR (Chỉ hiện khi đã chụp đủ ảnh) */}
             {photos.length === maxPhotos && !qrLink && (
               <button onClick={handleGenerateClick} disabled={isLoadingComposer || isUploading} className={`flex items-center justify-center w-full mt-6 text-white font-bold py-4 rounded-2xl transition-all ${isLoadingComposer || isUploading ? 'bg-white/10 cursor-wait' : 'bg-gradient-to-r from-pink-500 to-violet-500 hover:shadow-[0_0_25px_rgba(236,72,153,0.5)] transform hover:-translate-y-1'}`}>
-                {isLoadingComposer || isUploading ? <><Loader2 size={20} className="animate-spin mr-2" /> Hệ thống đang vẽ & tải ảnh...</> : <><Sparkles size={20} className="mr-2" /> Tạo ảnh Vector & Nhận QR</>}
+                {isLoadingComposer || isUploading ? <><Loader2 size={20} className="animate-spin mr-2" /> Hệ thống đang vẽ...</> : <><Sparkles size={20} className="mr-2" /> Tạo ảnh Vector & Nhận QR</>}
               </button>
             )}
 
-            {/* HIỆN MÃ QR KHI HOÀN THÀNH */}
             {qrLink && (
               <div className="mt-6 flex flex-col items-center bg-white p-4 rounded-3xl shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-500">
                 <div className="p-2 border-4 border-pink-100 rounded-xl mb-2"><QRCodeCanvas value={qrLink} size={140} level={"H"} includeMargin={false} /></div>
@@ -396,7 +383,7 @@ export default function Photobooth() {
         </div>
       )}
 
-      {/* COMPONENT VẼ VECTOR ẨN */}
+      {/* COMPONENT VẼ VECTOR ĐA NĂNG */}
       <FrameComposer
         photos={photos}
         layout={layout}
@@ -409,7 +396,6 @@ export default function Photobooth() {
         selectedFilter={selectedFilter}
         skinSmoothness={skinSmoothness}
       />
-
     </div>
   );
 }
