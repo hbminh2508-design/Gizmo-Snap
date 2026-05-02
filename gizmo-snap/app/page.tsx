@@ -8,7 +8,6 @@ import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Cro
 import FrameComposer from "@/components/FrameComposer";
 
 type FrameLayout = '2x2' | 'strip3' | 'strip4' | 'polaroid' | 'film' | 'grid6';
-// ĐÃ THÊM: 3 Theme Nghệ thuật mới (art_floral, art_film, art_gold)
 type FrameTheme = 'dark' | 'pink' | 'hello_kitty' | 'minimal' | 'ocean' | 'sunset' | 'pastel' | 'nature' | 'y2k' | 'wedding' | 'neon' | 'retro' | 'spiderman' | '30_4' | 'vietnam' | 'golden' | 'cyberpunk' | 'newspaper' | 'kawaii' | 'gothic' | 'holo' | 'vnu_theme' | 'art_floral' | 'art_film' | 'art_gold';
 type ImageFilter = 'none' | 'sepia' | 'grayscale' | 'vintage' | 'brighten' | 'cool';
 
@@ -37,7 +36,7 @@ export default function Photobooth() {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isLoadingComposer, setIsLoadingComposer] = useState<boolean>(false);
   const [selectedFilter, setSelectedFilter] = useState<ImageFilter>('none');
-  const [skinSmoothness, setSkinSmoothness] = useState<number>(50);
+  const [skinSmoothness, setSkinSmoothness] = useState<number>(26); // Default nhẹ nhàng
 
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printForm, setPrintForm] = useState({ name: '', phone: '', address: '' });
@@ -130,7 +129,6 @@ export default function Photobooth() {
     } setTimeout(() => setIsFlashing(false), 200);
   }, []);
 
-  // HÀM DEBUG: Tự động lấp đầy các khung bằng ảnh màu
   const handleDebugMode = () => {
     const fakePhotos: string[] = [];
     for(let i=0; i<maxPhotos; i++) {
@@ -189,7 +187,6 @@ export default function Photobooth() {
     { id: 'film', name: 'Cuộn Phim', desc: '3 ngang', prem: false }, { id: 'grid6', name: 'Lưới 3x2', desc: '6 ảnh (PRO+)', prem: true },
   ];
   
-  // TÁCH THÀNH 2 BỘ SƯU TẬP
   const artisticThemes = [
     { id: 'art_floral', name: 'Vintage Floral', prem: true, color: 'bg-[#f8f9fa] border-[#c4a77d] text-[#4a5d23] shadow-[0_0_15px_rgba(196,167,125,0.4)]' },
     { id: 'art_film', name: 'Cinematic Film', prem: true, color: 'bg-[#2b2b2b] border-[#eab308] text-[#eab308] shadow-[0_0_15px_rgba(234,179,8,0.3)]' },
@@ -227,7 +224,6 @@ export default function Photobooth() {
       {/* NAVBAR */}
       <div className="w-full max-w-7xl flex justify-between items-center mb-8 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-2xl">
         <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500 tracking-tight flex items-center gap-3 cursor-pointer" onClick={() => setStep(1)}>
-          {/* TÍCH HỢP LOGO VNU VÀO HEADER CHO SINH VIÊN */}
           {profile?.plan === 'vnu' && <img src="/vnu-logo.png" alt="VNU" className="h-9 w-9 object-contain bg-white rounded-full p-1" />}
           <Camera size={32} className="text-pink-500" /> Gizmo Snap
         </h1>
@@ -268,13 +264,11 @@ export default function Photobooth() {
         )}
       </div>
 
-      {/* --- MÀN HÌNH BƯỚC 1 --- */}
       {step === 1 && (
         <div className="flex flex-col lg:flex-row gap-8 w-full max-w-7xl items-stretch animate-in fade-in zoom-in duration-500">
           <div className="flex-1 bg-white/5 backdrop-blur-md p-8 rounded-3xl border border-white/10 shadow-2xl overflow-y-auto custom-scrollbar max-h-[75vh]">
             <div className="flex justify-between items-center mb-8">
                <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-violet-400">Tùy Chỉnh Khung & Theme</h2>
-               {/* NÚT DEBUG MODE CHO ADMIN (CHỈ HIỆN Ở BƯỚC 1 ĐỂ KIỂM TRA) */}
                {profile?.role === 'admin' && (
                   <button onClick={() => { setStep(2); setTimeout(handleDebugMode, 500); }} className="flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500 px-4 py-2 rounded-xl text-xs font-bold hover:bg-amber-500/40 transition">
                     <Bug size={14}/> DEBUG MODE
@@ -295,7 +289,6 @@ export default function Photobooth() {
               </div>
             </div>
 
-            {/* ARTISTIC COLLECTION (PHÂN VÙNG MỚI NÂNG CẤP) */}
             <div className="mb-8 p-6 bg-gradient-to-br from-purple-900/40 to-pink-900/20 rounded-3xl border border-pink-500/30 shadow-[0_0_25px_rgba(236,72,153,0.15)] relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/20 blur-[50px] -z-10 rounded-full"></div>
               <h3 className="text-xl font-black mb-6 flex items-center gap-2 text-pink-300 drop-shadow-md"><Gem size={24} className="text-pink-400"/> Artistic Collection (Premium)</h3>
@@ -308,7 +301,6 @@ export default function Photobooth() {
               </div>
             </div>
 
-            {/* STANDARD COLLECTION */}
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200"><Palette size={20} className="text-violet-400"/> Standard Styles</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -325,7 +317,6 @@ export default function Photobooth() {
             </button>
           </div>
 
-          {/* CSS PREVIEW */}
           <div className="w-full lg:w-[400px] bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center relative">
              <h3 className="text-lg font-semibold mb-6 text-gray-300">Xem trước CSS (Bản nháp)</h3>
              <div className={`transition-all duration-500 rounded-xl p-4 flex flex-col items-center shadow-2xl ${allThemes.find(t => t.id === theme)?.color} w-[260px] h-[340px] max-h-[400px]`}>
@@ -341,14 +332,12 @@ export default function Photobooth() {
         </div>
       )}
 
-      {/* --- MÀN HÌNH BƯỚC 2 --- */}
       {step === 2 && (
         <div className="flex flex-col xl:flex-row gap-8 w-full max-w-7xl justify-center items-start animate-in slide-in-from-right-10 fade-in duration-500">
           <div className="flex flex-col items-center bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex-1 w-full">
             <div className="flex justify-between w-full mb-4">
                <button onClick={() => { setStep(1); stopAutoShoot(); }} className="text-sm text-gray-400 hover:text-white flex items-center gap-1 bg-white/5 px-3 py-1 rounded-lg transition"><ArrowRight className="rotate-180" size={16}/> Đổi khung</button>
                
-               {/* NÚT DEBUG Ở BƯỚC 2 CHO ADMIN */}
                {profile?.role === 'admin' && (
                   <button onClick={handleDebugMode} className="flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500 px-3 py-1 rounded-lg text-xs font-bold hover:bg-amber-500/40 transition">
                     <Bug size={14}/> TỰ ĐỘNG ĐIỀN ẢNH (DEBUG)
@@ -362,7 +351,6 @@ export default function Photobooth() {
             </div>
 
             <div className="relative border border-white/10 rounded-[2rem] overflow-hidden mb-6 bg-black w-full max-w-[640px] aspect-video shadow-2xl">
-              {/* ÁP DỤNG CSS FILTER LÊN PREVIEW ĐỂ KHỚP VỚI CÀ DA MỚI */}
               <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover transform scale-x-[-1] transition-all`} 
                 style={{ 
                   filter: `${filters.find(f => f.id === selectedFilter)?.css} ${skinSmoothness > 0 ? `blur(${skinSmoothness/100}px) brightness(${1 + skinSmoothness/200}) saturate(1.1)` : ''}` 
@@ -409,7 +397,18 @@ export default function Photobooth() {
             <div className={`p-2 bg-slate-900/50 border border-white/10 shadow-inner rounded-xl grid gap-2 ${layout === '2x2' || layout === 'grid6' ? 'grid-cols-2 w-[300px] sm:w-[340px]' : layout === 'film' ? 'grid-cols-3 w-[300px] sm:w-[340px]' : layout === 'polaroid' ? 'grid-cols-1 w-[260px] sm:w-[300px]' : 'grid-cols-1 w-[200px]'}`}>
               {[...Array(maxPhotos)].map((_, index) => (
                 <div key={index} className="bg-slate-800/50 w-full aspect-video flex items-center justify-center overflow-hidden rounded-md border border-white/5 relative">
-                  {photos[index] ? <img src={photos[index]} className="w-full h-full object-cover" /> : <Camera size={16} className="text-slate-600" />}
+                  {photos[index] ? (
+                    // ĐÃ SỬA LỖI Ở ĐÂY: Áp dụng CSS Filter trực tiếp vào ảnh nháp để nó đổi màu y hệt màn hình Camera
+                    <img 
+                      src={photos[index]} 
+                      className="w-full h-full object-cover" 
+                      style={{ 
+                        filter: `${filters.find(f => f.id === selectedFilter)?.css || ''} ${skinSmoothness > 0 ? `blur(${skinSmoothness/100}px) brightness(${1 + skinSmoothness/200}) saturate(1.1)` : ''}` 
+                      }}
+                    />
+                  ) : (
+                    <Camera size={16} className="text-slate-600" />
+                  )}
                 </div>
               ))}
             </div>
