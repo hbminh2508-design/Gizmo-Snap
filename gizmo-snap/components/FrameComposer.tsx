@@ -30,7 +30,7 @@ const loadImage = (url: string): Promise<HTMLImageElement> => {
 };
 
 // ==========================================
-// CẤU HÌNH THÔNG MINH (CHARM DÀNH CHO PHÁI NỮ)
+// CẤU HÌNH THÔNG MINH (ĐÃ THÊM CHARM DÀNH CHO PHÁI NỮ)
 // ==========================================
 const THEME_CONFIGS: Record<string, any> = {
   minimal: { bg: '#ffffff', border: '#ffffff', shadow: 'rgba(0,0,0,0.08)', title: 'MINIMAL', titleColor: '#404040', font: '300 60px Arial' },
@@ -49,12 +49,17 @@ const THEME_CONFIGS: Record<string, any> = {
 };
 
 export default function FrameComposer({
-  photos, layout, theme, isPremium, onGenerateSuccess, onGenerateError,
+  photos, layout, theme, isPremium,
+  onGenerateSuccess, onGenerateError,
   isLoading, selectedFilter, skinSmoothness
 }: FrameComposerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => { if (isLoading && photos.length === maxPhotosMap[layout]) generateFrame(); }, [isLoading, photos, layout, theme]);
+  useEffect(() => {
+    if (isLoading && photos.length === maxPhotosMap[layout]) {
+      generateFrame();
+    }
+  }, [isLoading, photos, layout, theme]);
 
   // ==========================================
   // BỘ CÔNG CỤ VẼ CHARM TRANG TRÍ CHUNG
@@ -71,14 +76,16 @@ export default function FrameComposer({
   const drawMilesGlitchLogo = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number) => { ctx.save(); ctx.translate(x, y); const path = new Path2D("M50,0 L61,38 L97,38 L68,58 L79,93 L50,72 L21,93 L32,58 L3,38 L39,38 Z"); ctx.scale(size/100, size/100); ctx.fillStyle = '#ec4899'; ctx.fill(path); ctx.translate(3, 3); ctx.fillStyle = '#22d3ee'; ctx.fill(path); ctx.translate(-1.5, -1.5); ctx.fillStyle = '#ffffff'; ctx.fill(path); ctx.restore(); };
 
   // ==========================================
-  // HÀM VẼ ẢNH & XỬ LÝ FILTER CÀ DA (ĐÃ FIX LỖI SƯƠNG MÙ)
+  // ĐÃ SỬA LỖI: HÀM VẼ ẢNH & XỬ LÝ FILTER CÀ DA CHUẨN HTML5 CANVAS
   // ==========================================
   const drawImageCover = (
     ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number,
     w: number, h: number, radius: number = 0, filterCss: string = '', smoothness: number = 0
   ) => {
-    const imgRatio = img.width / img.height; const targetRatio = w / h;
+    const imgRatio = img.width / img.height;
+    const targetRatio = w / h;
     let sx, sy, sWidth, sHeight;
+
     if (imgRatio > targetRatio) { sHeight = img.height; sWidth = img.height * targetRatio; sx = (img.width - sWidth) / 2; sy = 0; }
     else { sWidth = img.width; sHeight = img.width / targetRatio; sx = 0; sy = (img.height - sHeight) / 2; }
 
@@ -86,24 +93,29 @@ export default function FrameComposer({
     if (radius > 0) { ctx.beginPath(); ctx.roundRect(x, y, w, h, radius); ctx.clip(); }
 
     if (smoothness > 0 || filterCss !== '') {
-      const tempCanvas = document.createElement('canvas'); tempCanvas.width = img.width; tempCanvas.height = img.height;
+      const tempCanvas = document.createElement('canvas'); 
+      tempCanvas.width = img.width; 
+      tempCanvas.height = img.height;
       const tempCtx = tempCanvas.getContext('2d');
       if (tempCtx) {
-        tempCtx.drawImage(img, 0, 0);
-        
         let filterString = [];
         if (filterCss) filterString.push(filterCss);
         if (smoothness > 0) {
-           // ĐÃ FIX: Giảm độ mờ (chia 100 thay vì chia 10), tăng bão hòa để da hồng hào tự nhiên
            filterString.push(`blur(${smoothness/100}px) brightness(${1 + smoothness/200}) saturate(1.1)`);
         }
         
+        // SỬA LỖI Ở ĐÂY: Bật Filter LÊN TRƯỚC khi vẽ ảnh gốc
         tempCtx.filter = filterString.join(' ');
-        tempCtx.drawImage(tempCanvas, 0, 0);
-        tempCtx.filter = 'none';
+        tempCtx.drawImage(img, 0, 0); 
+        tempCtx.filter = 'none'; // Tắt filter đi để tránh lỗi hệ thống
+        
+        // Vẽ lại cái Canvas đã được bọc Filter lên Canvas chính
         ctx.drawImage(tempCanvas, sx, sy, sWidth, sHeight, x, y, w, h);
       }
-    } else { ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h); }
+    } else { 
+      // Không có filter thì vẽ thẳng luôn
+      ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h); 
+    }
     ctx.restore();
   };
 
@@ -130,7 +142,7 @@ export default function FrameComposer({
       ];
       const filterCss = filtersData.find(f => f.id === selectedFilter)?.css || '';
 
-      // TÁCH LUỒNG: BỔ SUNG THÊM 3 KHUNG ARTISTIC MỚI VÀO MẢNG NÀY
+      // TÁCH LUỒNG THEMES
       const customThemes = ['30_4', 'vietnam', 'hello_kitty', 'wedding', 'neon', 'retro', 'cyberpunk', 'spiderman', 'vnu_theme', 'art_floral', 'art_film', 'art_gold'];
       if (customThemes.includes(theme)) {
          if (theme === '30_4' || theme === 'vietnam') drawVietnamTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout, theme);
@@ -141,12 +153,9 @@ export default function FrameComposer({
          if (theme === 'cyberpunk') drawCyberpunkTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'spiderman') drawSpiderVerseTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'vnu_theme') await drawVNUTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
-         
-         // 3 THEMES NGHỆ THUẬT PREMIUM
          if (theme === 'art_floral') drawArtFloral(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'art_film') drawArtFilm(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
          if (theme === 'art_gold') drawArtGold(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, layout);
-
       } else {
          const config = THEME_CONFIGS[theme] || THEME_CONFIGS['minimal'];
          drawConfigTheme(ctx, canvas, loadedImages, coords, imgW, imgH, filterCss, skinSmoothness, config, layout);
@@ -184,39 +193,28 @@ export default function FrameComposer({
     }
   };
 
-  // ==========================================
-  // BỘ 3 KHUNG NGHỆ THUẬT SIÊU ĐẸP (MỚI)
-  // ==========================================
   const drawArtFloral = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string) => {
     ctx.fillStyle = '#f8f9fa'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // Viền khung vintage
     ctx.strokeStyle = '#c4a77d'; ctx.lineWidth = 4; ctx.strokeRect(20, 20, canvas.width-40, canvas.height-40);
     ctx.strokeStyle = 'rgba(74, 93, 35, 0.3)'; ctx.lineWidth = 1; ctx.strokeRect(30, 30, canvas.width-60, canvas.height-60);
-    
-    // Lá cọ trang trí thủ công góc
     ctx.fillStyle = 'rgba(74, 93, 35, 0.6)';
     ctx.beginPath(); ctx.arc(40, 40, 60, 0, Math.PI/2); ctx.fill(); ctx.beginPath(); ctx.arc(canvas.width-40, canvas.height-40, 60, Math.PI, Math.PI*1.5); ctx.fill();
-
     const m = 12;
     for (let i = 0; i < images.length; i++) {
       const cx = coords[i].x, cy = coords[i].y;
       ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 20; ctx.fillStyle = '#fff'; ctx.fillRect(cx - m, cy - m, imgW + m*2, imgH + m*2); ctx.shadowColor = 'transparent';
       ctx.strokeStyle = '#c4a77d'; ctx.lineWidth = 2; ctx.strokeRect(cx - m + 4, cy - m + 4, imgW + m*2 - 8, imgH + m*2 - 8);
       drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 0, filterCss, smoothness);
-      drawFlowerCharm(ctx, cx + 10, cy + 10, 25, '#d4af37'); // Hoa góc ảnh
+      drawFlowerCharm(ctx, cx + 10, cy + 10, 25, '#d4af37');
     }
   };
 
   const drawArtFilm = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string) => {
-    ctx.fillStyle = '#1c1917'; ctx.fillRect(0, 0, canvas.width, canvas.height); // Đen nhám
-    
-    // Line cuộn phim màu vàng Kodak
+    ctx.fillStyle = '#1c1917'; ctx.fillRect(0, 0, canvas.width, canvas.height); 
     ctx.fillStyle = '#eab308'; 
     for(let i=0; i<canvas.width; i+=40) { ctx.fillRect(i, 10, 20, 20); ctx.fillRect(i, canvas.height-30, 20, 20); }
-
     ctx.font = 'bold 30px "Courier New"'; ctx.fillStyle = '#eab308'; ctx.textAlign = 'center';
     if(layout !== 'polaroid') ctx.fillText("KODAK VISION3 500T", canvas.width/2, 60);
-
     const m = layout.startsWith('strip') ? 10 : 20;
     for (let i = 0; i < images.length; i++) {
       const cx = coords[i].x, cy = coords[i].y;
@@ -224,8 +222,6 @@ export default function FrameComposer({
       ctx.fillStyle = '#1c1917'; 
       if (layout === 'film') { for(let hX = cx-10; hX < cx+imgW+20; hX+=25) { ctx.fillRect(hX, cy-m/2-6, 12, 8); ctx.fillRect(hX, cy+imgH+m/2-2, 12, 8); } }
       else { for(let hY = cy-10; hY < cy+imgH+20; hY+=25) { ctx.fillRect(cx-m/2-6, hY, 8, 12); ctx.fillRect(cx+imgW+m/2-2, hY, 8, 12); } }
-      
-      // Áp dụng bộ lọc Film (Màu ngả rêu/vàng)
       ctx.save(); ctx.filter = `sepia(0.3) contrast(1.2) hue-rotate(-10deg) ${filterCss}`;
       drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 0, '', smoothness); 
       ctx.restore();
@@ -234,33 +230,24 @@ export default function FrameComposer({
 
   const drawArtGold = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string) => {
     ctx.fillStyle = '#111'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Lưới vàng mờ ảo
     ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 1;
     for(let i=0; i<canvas.width; i+=30) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
     for(let i=0; i<canvas.height; i+=30) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
     ctx.fillStyle = 'rgba(17, 17, 17, 0.85)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     ctx.shadowColor = '#d4af37'; ctx.shadowBlur = 15; ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 4;
     ctx.strokeRect(30, 30, canvas.width-60, canvas.height-60); ctx.shadowColor = 'transparent';
-
     const m = 15;
     for (let i = 0; i < images.length; i++) {
       const cx = coords[i].x, cy = coords[i].y;
       ctx.fillStyle = '#000'; ctx.fillRect(cx - m, cy - m, imgW + m*2, imgH + m*2);
       ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 2; ctx.strokeRect(cx - 8, cy - 8, imgW + 16, imgH + 16);
       drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 0, filterCss, smoothness);
-      
-      // Khớp viền vàng sang trọng ở 2 góc
       ctx.fillStyle = '#d4af37'; 
-      ctx.fillRect(cx-10, cy-10, 20, 5); ctx.fillRect(cx-10, cy-10, 5, 20); // Top Left
-      ctx.fillRect(cx+imgW-10, cy-10, 20, 5); ctx.fillRect(cx+imgW+5, cy-10, 5, 20); // Top Right
+      ctx.fillRect(cx-10, cy-10, 20, 5); ctx.fillRect(cx-10, cy-10, 5, 20); 
+      ctx.fillRect(cx+imgW-10, cy-10, 20, 5); ctx.fillRect(cx+imgW+5, cy-10, 5, 20); 
     }
   };
 
-  // ==========================================
-  // CÁC THEME ĐẶC BIỆT CÒN LẠI (GIỮ NGUYÊN)
-  // ==========================================
   const drawStamp = (ctx: CanvasRenderingContext2D, x: number, y: number, angleDeg: number, bgThemeColor: string) => { ctx.save(); ctx.translate(x, y); ctx.rotate((angleDeg * Math.PI) / 180); const w = 140, h = 180; ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 10; ctx.fillStyle = '#fdfbf7'; ctx.fillRect(0, 0, w, h); ctx.shadowColor = 'transparent'; ctx.fillStyle = bgThemeColor; const r = 6, step = 20; for(let i=step; i<w; i+=step) { ctx.beginPath(); ctx.arc(i, 0, r, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(i, h, r, 0, Math.PI*2); ctx.fill(); } for(let i=step; i<h; i+=step) { ctx.beginPath(); ctx.arc(0, i, r, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(w, i, r, 0, Math.PI*2); ctx.fill(); } ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 1; ctx.strokeRect(15, 15, w-30, h-30); ctx.beginPath(); ctx.arc(w/2 - 30, h/2 - 30, 30, 0, Math.PI*2); ctx.strokeStyle = 'rgba(220, 38, 38, 0.4)'; ctx.lineWidth = 2; ctx.stroke(); ctx.save(); ctx.translate(w/2, 50); ctx.scale(0.4, 0.4); const star = new Path2D("M 50 5 L 61 39 L 97 39 L 68 59 L 79 93 L 50 72 L 21 93 L 32 59 L 3 39 L 39 39 Z"); ctx.fillStyle = '#facc15'; ctx.fill(star); ctx.restore(); ctx.fillStyle = '#333'; ctx.font = 'bold 16px Courier New'; ctx.textAlign = 'center'; ctx.fillText('BƯU CHÍNH', w/2, 25); ctx.fillStyle = '#b91c1c'; ctx.fillText('VIỆT NAM', w/2, h - 25); ctx.restore(); };
 
   const drawVietnamTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, images: HTMLImageElement[], coords: any[], imgW: number, imgH: number, filterCss: string, smoothness: number, layout: string, currentTheme: string) => { const RED_BG = '#991b1b'; ctx.fillStyle = RED_BG; ctx.fillRect(0, 0, canvas.width, canvas.height); const m = layout.startsWith('strip') ? 8 : 15; ctx.textAlign = 'center'; const mainTitle = currentTheme === '30_4' ? 'ĐẠI THẮNG 30/4' : '★ VIỆT NAM ★'; if (layout === 'polaroid') { ctx.fillStyle = '#fca5a5'; ctx.font = 'bold 40px Courier New'; ctx.fillText(mainTitle, canvas.width / 2, canvas.height - 70); } else { ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 10; ctx.fillStyle = '#fca5a5'; ctx.font = `bold ${layout.startsWith('strip') ? 45 : 55}px Courier New`; ctx.fillText(mainTitle, canvas.width / 2, 80); ctx.shadowColor = 'transparent'; ctx.fillStyle = '#facc15'; ctx.font = 'bold 30px Arial'; ctx.fillText('★ TỰ HÀO QUÊ HƯƠNG ★', canvas.width / 2, canvas.height - 30); } for (let i = 0; i < images.length; i++) { const cx = coords[i].x, cy = coords[i].y; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 20; ctx.fillStyle = '#f8fafc'; ctx.beginPath(); ctx.roundRect(cx - m*2, cy - m*2, imgW + m*4, imgH + m*4, 4); ctx.fill(); ctx.shadowColor = 'transparent'; ctx.fillStyle = '#000'; ctx.fillRect(cx - m, cy - m, imgW + m*2, imgH + m*2); drawImageCover(ctx, images[i], cx, cy, imgW, imgH, 0, filterCss, smoothness); if (i % 2 === 0) { drawConicalHatCharm(ctx, cx + imgW - 20, cy - 10, 45); } else { drawOnePillarCharm(ctx, cx - 15, cy + imgH - 30, 45); } if (layout !== 'polaroid') { if (i === 0) drawDecorWatermark(ctx, canvas.width - 180, canvas.height - 100, 'Gizmo Snap Collection'); else if (i === images.length - 1) drawDecorWatermark(ctx, 150, canvas.height - 100, 'Vietnamese Pride'); } } drawStamp(ctx, 40, 40, -10, RED_BG); drawStamp(ctx, canvas.width - 150, canvas.height - 200, 15, RED_BG); drawLotusCharm(ctx, 40, canvas.height - 150, 150); };
