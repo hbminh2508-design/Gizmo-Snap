@@ -4,11 +4,12 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { supabase } from "@/utils/supabase";
 import { QRCodeCanvas } from "qrcode.react";
 import Link from "next/link";
-import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Crown, Bug, LayoutGrid, Palette, ArrowRight, Lock, Wand2, GraduationCap, Printer, Truck, X, Package, ShieldCheck } from "lucide-react";
+import { Camera, RefreshCcw, Play, Square, Sparkles, Loader2, LogIn, LogOut, Crown, Bug, LayoutGrid, Palette, ArrowRight, Lock, Wand2, GraduationCap, Printer, Truck, X, Package, ShieldCheck, Gem } from "lucide-react";
 import FrameComposer from "@/components/FrameComposer";
 
 type FrameLayout = '2x2' | 'strip3' | 'strip4' | 'polaroid' | 'film' | 'grid6';
-type FrameTheme = 'dark' | 'pink' | 'hello_kitty' | 'minimal' | 'ocean' | 'sunset' | 'pastel' | 'nature' | 'y2k' | 'wedding' | 'neon' | 'retro' | 'spiderman' | '30_4' | 'vietnam' | 'golden' | 'cyberpunk' | 'newspaper' | 'kawaii' | 'gothic' | 'holo' | 'vnu_theme';
+// ĐÃ THÊM: 3 Theme Nghệ thuật mới (art_floral, art_film, art_gold)
+type FrameTheme = 'dark' | 'pink' | 'hello_kitty' | 'minimal' | 'ocean' | 'sunset' | 'pastel' | 'nature' | 'y2k' | 'wedding' | 'neon' | 'retro' | 'spiderman' | '30_4' | 'vietnam' | 'golden' | 'cyberpunk' | 'newspaper' | 'kawaii' | 'gothic' | 'holo' | 'vnu_theme' | 'art_floral' | 'art_film' | 'art_gold';
 type ImageFilter = 'none' | 'sepia' | 'grayscale' | 'vintage' | 'brighten' | 'cool';
 
 export const getDirectDriveLink = (url: string) => {
@@ -65,34 +66,24 @@ export default function Photobooth() {
   }, []);
 
   const fetchProfile = async (userData: any) => {
-    // 1. Lấy dữ liệu từ hàm RPC
     let { data } = await supabase.rpc('check_and_reset_shoots', { user_id: userData.id });
-    
-    // 2. SỬA LỖI: Mở chiếc hộp Array ra để lấy Object thật
     let currentProfile = null;
     if (Array.isArray(data) && data.length > 0) currentProfile = data[0];
     else if (data && !Array.isArray(data)) currentProfile = data;
-
-    // 3. Fallback lấy thường
     if (!currentProfile) { 
       const { data: fallback } = await supabase.from("profiles").select("*").eq("id", userData.id).single(); 
       currentProfile = fallback; 
     }
-
-    // 4. SỬA LỖI KHÁCH HÀNG MỚI TINH: Tự động khởi tạo Free 10 lượt
     if (!currentProfile) {
       const newProfile = { id: userData.id, role: 'user', plan: 'free', daily_shoots: 10 };
       await supabase.from('profiles').insert([newProfile]);
       currentProfile = newProfile;
     }
-
-    // 5. Kiểm tra VNU
     if (userData.email?.endsWith('@vnu.edu.vn') && currentProfile?.plan !== 'vnu' && currentProfile?.plan !== 'limitless' && currentProfile?.plan !== 'exclusive') {
       await supabase.from('profiles').update({ plan: 'vnu', daily_shoots: 50 }).eq('id', userData.id);
       currentProfile.plan = 'vnu'; currentProfile.daily_shoots = 50;
       alert("🎉 TING TING! Hệ thống nhận diện Email VNU. Tặng bạn gói Đặc quyền!");
     }
-    
     setProfile(currentProfile);
   };
 
@@ -139,13 +130,18 @@ export default function Photobooth() {
     } setTimeout(() => setIsFlashing(false), 200);
   }, []);
 
+  // HÀM DEBUG: Tự động lấp đầy các khung bằng ảnh màu
   const handleDebugMode = () => {
-    const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360; const ctx = canvas.getContext('2d'); if (!ctx) return;
     const fakePhotos: string[] = [];
     for(let i=0; i<maxPhotos; i++) {
-      ctx.fillStyle = '#' + Math.floor(Math.random()*16777215).toString(16); ctx.fillRect(0, 0, 640, 360);
-      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center'; ctx.fillText(`MOCK ${i+1}`, 320, 180); fakePhotos.push(canvas.toDataURL("image/png"));
-    } setPhotos(fakePhotos); setHasDecremented(true); 
+      const canvas = document.createElement('canvas'); canvas.width = 1280; canvas.height = 720; const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#' + Math.floor(Math.random()*16777215).toString(16); ctx.fillRect(0, 0, 1280, 720);
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 80px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(`DEBUG MOCK ${i+1}`, 640, 360); fakePhotos.push(canvas.toDataURL("image/png"));
+      }
+    } 
+    setPhotos(fakePhotos); setHasDecremented(true); 
   };
 
   useEffect(() => {
@@ -193,9 +189,18 @@ export default function Photobooth() {
     { id: 'film', name: 'Cuộn Phim', desc: '3 ngang', prem: false }, { id: 'grid6', name: 'Lưới 3x2', desc: '6 ảnh (PRO+)', prem: true },
   ];
   
-  const themes = [
+  // TÁCH THÀNH 2 BỘ SƯU TẬP
+  const artisticThemes = [
+    { id: 'art_floral', name: 'Vintage Floral', prem: true, color: 'bg-[#f8f9fa] border-[#c4a77d] text-[#4a5d23] shadow-[0_0_15px_rgba(196,167,125,0.4)]' },
+    { id: 'art_film', name: 'Cinematic Film', prem: true, color: 'bg-[#2b2b2b] border-[#eab308] text-[#eab308] shadow-[0_0_15px_rgba(234,179,8,0.3)]' },
+    { id: 'art_gold', name: 'Luxury Gold', prem: true, color: 'bg-[#111] border-[#d4af37] text-[#d4af37] shadow-[0_0_20px_rgba(212,175,55,0.4)]' },
+  ];
+
+  const standardThemes = [
     { id: 'minimal', name: 'Minimal White', prem: false, color: 'bg-white border-gray-300 text-gray-800 shadow-md' }, { id: 'dark', name: 'Dark Classic', prem: false, color: 'bg-slate-900 border-slate-700 text-slate-300' }, { id: 'pink', name: 'Pinky Cute', prem: false, color: 'bg-pink-50 border-pink-300 text-pink-600' }, { id: 'ocean', name: 'Ocean Breeze', prem: false, color: 'bg-sky-100 border-sky-400 text-sky-800' }, { id: 'sunset', name: 'Sunset Glow', prem: false, color: 'bg-orange-100 border-orange-400 text-orange-800' }, { id: 'pastel', name: 'Pastel Dream', prem: false, color: 'bg-purple-100 border-purple-300 text-purple-700' }, { id: 'nature', name: 'Botanical', prem: false, color: 'bg-green-100 border-green-400 text-green-800' }, { id: 'y2k', name: 'Y2K Cyber', prem: false, color: 'bg-zinc-200 border-zinc-400 text-zinc-900' }, { id: 'hello_kitty', name: 'Hello Kitty', prem: false, color: 'bg-pink-200 border-pink-500 text-pink-800 shadow-[0_0_10px_#f472b6]' }, { id: 'vnu_theme', name: '#ToiLaSinhVienVNU', prem: true, color: 'bg-[#0f5132] border-[#22c55e] text-white shadow-[0_0_15px_#22c55e]' }, { id: 'golden', name: 'Golden Hour', prem: true, color: 'bg-yellow-900 border-yellow-400 text-yellow-200 shadow-[0_0_15px_#facc15]' }, { id: 'wedding', name: 'Royal Wedding', prem: true, color: 'bg-slate-50 border-amber-300 text-amber-700 shadow-[0_0_15px_#fcd34d]' }, { id: 'holo', name: 'Holographic', prem: true, color: 'bg-gradient-to-r from-pink-300 via-purple-300 to-cyan-300 border-white text-white' }, { id: 'neon', name: 'Neon Party', prem: true, color: 'bg-black border-cyan-400 text-fuchsia-400 shadow-[0_0_20px_#22d3ee]' }, { id: 'cyberpunk', name: 'Cyberpunk City', prem: true, color: 'bg-fuchsia-950 border-cyan-400 text-cyan-200' }, { id: 'retro', name: 'Vintage Film', prem: true, color: 'bg-[#d4c5b0] border-[#3e2723] text-[#4e342e]' }, { id: 'newspaper', name: 'Daily News', prem: true, color: 'bg-gray-200 border-black text-black font-serif' }, { id: 'kawaii', name: 'Kawaii Magic', prem: true, color: 'bg-pink-300 border-yellow-400 text-white shadow-[0_0_15px_#f472b6]' }, { id: 'gothic', name: 'Dark Gothic', prem: true, color: 'bg-red-950 border-red-600 text-red-200' }, { id: 'spiderman', name: 'Spider-Verse', prem: true, color: 'bg-red-700 border-blue-600 text-yellow-300' }, { id: '30_4', name: 'Đại Thắng 30/4', prem: true, color: 'bg-red-800 border-yellow-400 text-yellow-200' }, { id: 'vietnam', name: 'Tự Hào VN', prem: true, color: 'bg-red-900 border-yellow-500 text-yellow-400' },
   ];
+
+  const allThemes = [...artisticThemes, ...standardThemes];
 
   const filters: { id: ImageFilter; name: string; css: string }[] = [ { id: 'none', name: 'Gốc', css: '' }, { id: 'sepia', name: 'Sepia', css: 'sepia(0.8)' }, { id: 'grayscale', name: 'B&W', css: 'grayscale(1)' }, { id: 'vintage', name: 'Hoài cổ', css: 'sepia(0.5) contrast(1.1) brightness(0.9)' }, { id: 'brighten', name: 'Sáng', css: 'brightness(1.2) contrast(1.1)' }, { id: 'cool', name: 'Lạnh', css: 'hue-rotate(10deg) saturate(1.2)' }, ];
 
@@ -219,8 +224,11 @@ export default function Photobooth() {
     <div className="flex flex-col items-center min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6 font-sans selection:bg-pink-500 selection:text-white">
       {isFlashing && <div className="fixed inset-0 bg-white z-[9999] opacity-100 transition-opacity duration-300 mix-blend-screen pointer-events-none" />}
 
+      {/* NAVBAR */}
       <div className="w-full max-w-7xl flex justify-between items-center mb-8 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-2xl">
-        <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500 tracking-tight flex items-center gap-2 cursor-pointer" onClick={() => setStep(1)}>
+        <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500 tracking-tight flex items-center gap-3 cursor-pointer" onClick={() => setStep(1)}>
+          {/* TÍCH HỢP LOGO VNU VÀO HEADER CHO SINH VIÊN */}
+          {profile?.plan === 'vnu' && <img src="/vnu-logo.png" alt="VNU" className="h-9 w-9 object-contain bg-white rounded-full p-1" />}
           <Camera size={32} className="text-pink-500" /> Gizmo Snap
         </h1>
         {user ? (
@@ -235,7 +243,7 @@ export default function Photobooth() {
 
             {profile?.role === 'admin' && (
               <Link href="/admin" className="flex items-center gap-2 text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-2 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.4)] hover:scale-105 transition-transform">
-                <ShieldCheck size={18} /> Quản Trị Hệ Thống
+                <ShieldCheck size={18} /> Quản Trị
               </Link>
             )}
 
@@ -248,7 +256,7 @@ export default function Photobooth() {
                   <span className="text-[10px] bg-gradient-to-r from-pink-500 to-violet-500 text-white px-2 py-0.5 rounded-full uppercase font-bold tracking-wider shadow-lg">{profile?.plan || "free"}</span>
                 )}
                 {profile?.plan !== 'limitless' && profile?.plan !== 'exclusive' && (
-                  <span className="text-[10px] bg-white/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-bold ml-2">Còn: {profile?.daily_shoots || 0} lượt</span>
+                  <span className="text-[10px] bg-white/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-bold ml-2">Còn: {profile?.daily_shoots || 0}</span>
                 )}
               </div>
             </div>
@@ -260,10 +268,20 @@ export default function Photobooth() {
         )}
       </div>
 
+      {/* --- MÀN HÌNH BƯỚC 1 --- */}
       {step === 1 && (
         <div className="flex flex-col lg:flex-row gap-8 w-full max-w-7xl items-stretch animate-in fade-in zoom-in duration-500">
-          <div className="flex-1 bg-white/5 backdrop-blur-md p-8 rounded-3xl border border-white/10 shadow-2xl">
-            <h2 className="text-3xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-violet-400">Tùy Chỉnh Khung & Theme</h2>
+          <div className="flex-1 bg-white/5 backdrop-blur-md p-8 rounded-3xl border border-white/10 shadow-2xl overflow-y-auto custom-scrollbar max-h-[75vh]">
+            <div className="flex justify-between items-center mb-8">
+               <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-violet-400">Tùy Chỉnh Khung & Theme</h2>
+               {/* NÚT DEBUG MODE CHO ADMIN (CHỈ HIỆN Ở BƯỚC 1 ĐỂ KIỂM TRA) */}
+               {profile?.role === 'admin' && (
+                  <button onClick={() => { setStep(2); setTimeout(handleDebugMode, 500); }} className="flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500 px-4 py-2 rounded-xl text-xs font-bold hover:bg-amber-500/40 transition">
+                    <Bug size={14}/> DEBUG MODE
+                  </button>
+               )}
+            </div>
+
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200"><LayoutGrid size={20} className="text-pink-400"/> Chọn Kích Thước</h3>
               <div className="flex overflow-x-auto pb-4 gap-3 snap-x hide-scrollbar">
@@ -276,25 +294,42 @@ export default function Photobooth() {
                 ))}
               </div>
             </div>
+
+            {/* ARTISTIC COLLECTION (PHÂN VÙNG MỚI NÂNG CẤP) */}
+            <div className="mb-8 p-6 bg-gradient-to-br from-purple-900/40 to-pink-900/20 rounded-3xl border border-pink-500/30 shadow-[0_0_25px_rgba(236,72,153,0.15)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/20 blur-[50px] -z-10 rounded-full"></div>
+              <h3 className="text-xl font-black mb-6 flex items-center gap-2 text-pink-300 drop-shadow-md"><Gem size={24} className="text-pink-400"/> Artistic Collection (Premium)</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {artisticThemes.map((item) => (
+                  <button key={item.id} onClick={() => handleSelect('theme', item.id, item.prem)} className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center font-bold text-base h-24 ${item.color} ${theme === item.id ? 'ring-4 ring-pink-400 ring-offset-2 ring-offset-purple-900 scale-105 z-10' : 'opacity-90 hover:opacity-100 hover:-translate-y-1'}`}>
+                    {item.name} {item.prem && <Lock size={14} className="opacity-80 mt-1" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* STANDARD COLLECTION */}
             <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200"><Palette size={20} className="text-violet-400"/> Chọn Phong Cách Độc Quyền</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {themes.map((item) => (
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200"><Palette size={20} className="text-violet-400"/> Standard Styles</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {standardThemes.map((item) => (
                   <button key={item.id} onClick={() => handleSelect('theme', item.id, item.prem)} className={`p-3 rounded-2xl border-2 transition-all flex items-center justify-between font-bold text-sm ${item.color} ${theme === item.id ? 'ring-4 ring-white ring-offset-2 ring-offset-slate-900 scale-105 z-10' : 'opacity-80 hover:opacity-100'}`}>
                     {item.name} {item.prem && <Lock size={14} className="opacity-80" />}
                   </button>
                 ))}
               </div>
             </div>
+
             <button onClick={() => { if(!user) { alert("Đăng nhập để chụp!"); return; } setStep(2); resetBooth(); }} className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 to-violet-500 text-white font-bold py-4 rounded-2xl shadow-xl transform transition hover:scale-[1.02] text-lg mt-4">
               Vào bốt chụp <ArrowRight size={24} />
             </button>
           </div>
 
+          {/* CSS PREVIEW */}
           <div className="w-full lg:w-[400px] bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center relative">
              <h3 className="text-lg font-semibold mb-6 text-gray-300">Xem trước CSS (Bản nháp)</h3>
-             <div className={`transition-all duration-500 rounded-xl p-4 flex flex-col items-center shadow-2xl ${themes.find(t => t.id === theme)?.color} w-[260px] h-[340px] max-h-[400px]`}>
-                <h4 className="font-black text-xl mb-4 text-center tracking-wider">{themes.find(t => t.id === theme)?.name.toUpperCase()}</h4>
+             <div className={`transition-all duration-500 rounded-xl p-4 flex flex-col items-center shadow-2xl ${allThemes.find(t => t.id === theme)?.color} w-[260px] h-[340px] max-h-[400px]`}>
+                <h4 className="font-black text-xl mb-4 text-center tracking-wider">{allThemes.find(t => t.id === theme)?.name.toUpperCase()}</h4>
                 <div className={`grid gap-2 w-full ${layout === '2x2' || layout === 'grid6' ? 'grid-cols-2' : layout === 'film' ? 'grid-cols-3' : 'grid-cols-1'}`}>
                    {[...Array(maxPhotosMap[layout])].map((_, i) => (
                      <div key={i} className="bg-black/50 w-full aspect-video rounded border border-white/30 flex items-center justify-center"><Camera size={16} className="opacity-50" /></div>
@@ -306,11 +341,20 @@ export default function Photobooth() {
         </div>
       )}
 
+      {/* --- MÀN HÌNH BƯỚC 2 --- */}
       {step === 2 && (
         <div className="flex flex-col xl:flex-row gap-8 w-full max-w-7xl justify-center items-start animate-in slide-in-from-right-10 fade-in duration-500">
           <div className="flex flex-col items-center bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex-1 w-full">
             <div className="flex justify-between w-full mb-4">
                <button onClick={() => { setStep(1); stopAutoShoot(); }} className="text-sm text-gray-400 hover:text-white flex items-center gap-1 bg-white/5 px-3 py-1 rounded-lg transition"><ArrowRight className="rotate-180" size={16}/> Đổi khung</button>
+               
+               {/* NÚT DEBUG Ở BƯỚC 2 CHO ADMIN */}
+               {profile?.role === 'admin' && (
+                  <button onClick={handleDebugMode} className="flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500 px-3 py-1 rounded-lg text-xs font-bold hover:bg-amber-500/40 transition">
+                    <Bug size={14}/> TỰ ĐỘNG ĐIỀN ẢNH (DEBUG)
+                  </button>
+               )}
+
                <div className="flex bg-slate-800/50 p-1 rounded-xl border border-white/5">
                 <button onClick={() => { setIsAutoMode(false); stopAutoShoot(); }} className={`px-4 md:px-6 py-1.5 rounded-lg transition-all text-sm font-semibold ${!isAutoMode ? 'bg-gradient-to-r from-pink-500 to-violet-500 text-white' : 'text-gray-400'}`}>Thủ công</button>
                 <button onClick={() => setIsAutoMode(true)} className={`px-4 md:px-6 py-1.5 rounded-lg transition-all text-sm font-semibold ${isAutoMode ? 'bg-gradient-to-r from-pink-500 to-violet-500 text-white' : 'text-gray-400'}`}>Tự động</button>
@@ -318,7 +362,12 @@ export default function Photobooth() {
             </div>
 
             <div className="relative border border-white/10 rounded-[2rem] overflow-hidden mb-6 bg-black w-full max-w-[640px] aspect-video shadow-2xl">
-              <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover transform scale-x-[-1] transition-all`} style={{ filter: filters.find(f => f.id === selectedFilter)?.css }} />
+              {/* ÁP DỤNG CSS FILTER LÊN PREVIEW ĐỂ KHỚP VỚI CÀ DA MỚI */}
+              <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover transform scale-x-[-1] transition-all`} 
+                style={{ 
+                  filter: `${filters.find(f => f.id === selectedFilter)?.css} ${skinSmoothness > 0 ? `blur(${skinSmoothness/100}px) brightness(${1 + skinSmoothness/200}) saturate(1.1)` : ''}` 
+                }} 
+              />
               {countdown !== null && countdown > 0 && <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm z-10"><span className="text-7xl md:text-9xl font-black text-white drop-shadow-[0_0_30px_rgba(236,72,153,0.8)] animate-pulse">{countdown}</span></div>}
             </div>
 
@@ -394,21 +443,10 @@ export default function Photobooth() {
             <h3 className="text-2xl font-black mb-2 flex items-center gap-2 text-amber-600"><Printer /> Giao ảnh tận nhà</h3>
             <p className="text-sm text-gray-500 mb-6">Đặc quyền gói Exclusive: Chúng tôi sẽ in ảnh chất lượng cao và gửi đến tận cửa nhà bạn!</p>
             <form onSubmit={submitPrintRequest} className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-bold text-gray-700">Họ và tên người nhận</label>
-                <input required value={printForm.name} onChange={e => setPrintForm({...printForm, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mt-1 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="VD: Nguyễn Văn A" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-700">Số điện thoại</label>
-                <input required type="tel" value={printForm.phone} onChange={e => setPrintForm({...printForm, phone: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mt-1 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="VD: 0987654321" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-700">Địa chỉ giao hàng chi tiết</label>
-                <textarea required value={printForm.address} onChange={e => setPrintForm({...printForm, address: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mt-1 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[80px]" placeholder="Số nhà, Đường, Phường, v.v..." />
-              </div>
-              <button disabled={isSubmittingPrint} type="submit" className={`w-full font-bold py-4 rounded-xl text-white transition-all flex justify-center items-center gap-2 ${isSubmittingPrint ? 'bg-gray-400' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-lg hover:-translate-y-1'}`}>
-                {isSubmittingPrint ? <Loader2 className="animate-spin" size={20}/> : <Truck size={20}/>} Xác nhận Gửi ảnh
-              </button>
+              <div><label className="text-xs font-bold text-gray-700">Họ tên</label><input required value={printForm.name} onChange={e => setPrintForm({...printForm, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-amber-500" placeholder="Nguyễn Văn A" /></div>
+              <div><label className="text-xs font-bold text-gray-700">SĐT</label><input required type="tel" value={printForm.phone} onChange={e => setPrintForm({...printForm, phone: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-amber-500" placeholder="0987654321" /></div>
+              <div><label className="text-xs font-bold text-gray-700">Địa chỉ</label><textarea required value={printForm.address} onChange={e => setPrintForm({...printForm, address: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-amber-500 min-h-[80px]" placeholder="Số nhà, Đường, Phường..." /></div>
+              <button disabled={isSubmittingPrint} type="submit" className={`w-full font-bold py-4 rounded-xl text-white transition-all flex justify-center items-center gap-2 ${isSubmittingPrint ? 'bg-gray-400' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:-translate-y-1'}`}>{isSubmittingPrint ? <Loader2 className="animate-spin" size={20}/> : <Truck size={20}/>} Xác nhận</button>
             </form>
           </div>
         </div>
@@ -420,31 +458,15 @@ export default function Photobooth() {
             <button onClick={() => setShowOrdersModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500"><X size={24}/></button>
             <h3 className="text-2xl font-black mb-6 flex items-center gap-2 text-pink-600"><Package /> Đơn in ảnh của bạn</h3>
             <div className="overflow-y-auto custom-scrollbar flex-1 pr-2">
-              {myOrders.length === 0 ? (
-                <p className="text-center text-gray-500 py-10">Bạn chưa có yêu cầu in ảnh nào.</p>
-              ) : (
+              {myOrders.length === 0 ? <p className="text-center text-gray-500 py-10">Chưa có yêu cầu in ảnh.</p> : (
                 <div className="flex flex-col gap-4">
                   {myOrders.map(order => (
                     <div key={order.id} className="border border-gray-100 bg-gray-50 p-4 rounded-2xl flex gap-4 items-start">
-                      <a href={order.image_url} target="_blank" rel="noreferrer">
-                        <img src={getDirectDriveLink(order.image_url)} alt="preview" className="w-20 h-20 object-cover rounded-lg border border-gray-200 shadow-sm" />
-                      </a>
+                      <img src={getDirectDriveLink(order.image_url)} alt="preview" className="w-20 h-20 object-cover rounded-lg border shadow-sm" />
                       <div className="flex-1">
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="font-bold text-sm text-gray-800">{new Date(order.created_at).toLocaleDateString('vi-VN')}</p>
-                          <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${order.status === 'pending' ? 'bg-amber-100 text-amber-700' : order.status === 'shipping' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                            {order.status === 'pending' ? 'Chờ duyệt' : order.status === 'shipping' ? 'Đang giao' : 'Đã giao'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500 mb-1"><strong>Nhận:</strong> {order.customer_name} - {order.phone}</p>
-                        <p className="text-xs text-gray-500 mb-2"><strong>Đ/c:</strong> {order.address}</p>
-                        {order.tracking_code ? (
-                          <div className="bg-white border border-dashed border-blue-300 p-2 rounded-lg inline-block">
-                            <p className="text-xs text-blue-600 font-bold flex items-center gap-1"><Truck size={14}/> Mã Vận Đơn: <span className="font-mono text-sm bg-blue-50 px-1 rounded">{order.tracking_code}</span></p>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-amber-600 italic">Đang chờ Admin cung cấp mã vận đơn...</p>
-                        )}
+                        <div className="flex justify-between items-start mb-2"><p className="font-bold text-sm text-gray-800">{new Date(order.created_at).toLocaleDateString('vi-VN')}</p><span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${order.status === 'pending' ? 'bg-amber-100 text-amber-700' : order.status === 'shipping' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{order.status}</span></div>
+                        <p className="text-xs text-gray-500 mb-1"><strong>Nhận:</strong> {order.customer_name} - {order.phone}</p><p className="text-xs text-gray-500 mb-2 line-clamp-1">{order.address}</p>
+                        {order.tracking_code ? <div className="bg-white border border-dashed border-blue-300 p-2 rounded-lg inline-block"><p className="text-xs text-blue-600 font-bold"><Truck size={14} className="inline mr-1"/> Mã Vận Đơn: <span className="font-mono text-sm bg-blue-50 px-1 rounded">{order.tracking_code}</span></p></div> : <p className="text-xs text-amber-600 italic">Đang chờ Admin...</p>}
                       </div>
                     </div>
                   ))}
