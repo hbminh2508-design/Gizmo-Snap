@@ -36,7 +36,7 @@ export default function Photobooth() {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isLoadingComposer, setIsLoadingComposer] = useState<boolean>(false);
   const [selectedFilter, setSelectedFilter] = useState<ImageFilter>('none');
-  const [skinSmoothness, setSkinSmoothness] = useState<number>(26); // Default nhẹ nhàng
+  const [skinSmoothness, setSkinSmoothness] = useState<number>(26);
 
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printForm, setPrintForm] = useState({ name: '', phone: '', address: '' });
@@ -48,6 +48,12 @@ export default function Photobooth() {
   const isPremium = ['pro', 'limitless', 'exclusive', 'vnu'].includes(profile?.plan);
   const maxPhotosMap: Record<FrameLayout, number> = { '2x2': 4, 'strip3': 3, 'strip4': 4, 'polaroid': 1, 'film': 3, 'grid6': 6 };
   const maxPhotos = maxPhotosMap[layout];
+
+  const filters: { id: ImageFilter; name: string; css: string }[] = [ 
+    { id: 'none', name: 'Gốc', css: '' }, { id: 'sepia', name: 'Sepia', css: 'sepia(0.8)' }, 
+    { id: 'grayscale', name: 'B&W', css: 'grayscale(1)' }, { id: 'vintage', name: 'Hoài cổ', css: 'sepia(0.5) contrast(1.1) brightness(0.9)' }, 
+    { id: 'brighten', name: 'Sáng', css: 'brightness(1.2) contrast(1.1)' }, { id: 'cool', name: 'Lạnh', css: 'hue-rotate(10deg) saturate(1.2)' } 
+  ];
 
   useEffect(() => {
     const getSession = async () => {
@@ -199,8 +205,6 @@ export default function Photobooth() {
 
   const allThemes = [...artisticThemes, ...standardThemes];
 
-  const filters: { id: ImageFilter; name: string; css: string }[] = [ { id: 'none', name: 'Gốc', css: '' }, { id: 'sepia', name: 'Sepia', css: 'sepia(0.8)' }, { id: 'grayscale', name: 'B&W', css: 'grayscale(1)' }, { id: 'vintage', name: 'Hoài cổ', css: 'sepia(0.5) contrast(1.1) brightness(0.9)' }, { id: 'brighten', name: 'Sáng', css: 'brightness(1.2) contrast(1.1)' }, { id: 'cool', name: 'Lạnh', css: 'hue-rotate(10deg) saturate(1.2)' }, ];
-
   const handleSelect = (type: 'layout'|'theme', id: string, prem: boolean) => {
     if (prem && !isPremium) { alert("Gói FREE không thể dùng tính năng này. Hãy nâng cấp VIP nhé!"); return; }
     if (type === 'layout') setLayout(id as FrameLayout); else setTheme(id as FrameTheme);
@@ -351,9 +355,10 @@ export default function Photobooth() {
             </div>
 
             <div className="relative border border-white/10 rounded-[2rem] overflow-hidden mb-6 bg-black w-full max-w-[640px] aspect-video shadow-2xl">
+              {/* ĐÃ FIX: Áp dụng Filter trực tiếp lên Video Camera */}
               <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover transform scale-x-[-1] transition-all`} 
                 style={{ 
-                  filter: `${filters.find(f => f.id === selectedFilter)?.css} ${skinSmoothness > 0 ? `blur(${skinSmoothness/100}px) brightness(${1 + skinSmoothness/200}) saturate(1.1)` : ''}` 
+                  filter: `${filters.find(f => f.id === selectedFilter)?.css || ''} ${skinSmoothness > 0 ? `brightness(${1 + skinSmoothness/300}) saturate(1.05) contrast(1.02)` : ''}` 
                 }} 
               />
               {countdown !== null && countdown > 0 && <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm z-10"><span className="text-7xl md:text-9xl font-black text-white drop-shadow-[0_0_30px_rgba(236,72,153,0.8)] animate-pulse">{countdown}</span></div>}
@@ -398,12 +403,12 @@ export default function Photobooth() {
               {[...Array(maxPhotos)].map((_, index) => (
                 <div key={index} className="bg-slate-800/50 w-full aspect-video flex items-center justify-center overflow-hidden rounded-md border border-white/5 relative">
                   {photos[index] ? (
-                    // ĐÃ SỬA LỖI Ở ĐÂY: Áp dụng CSS Filter trực tiếp vào ảnh nháp để nó đổi màu y hệt màn hình Camera
+                    // ĐÃ FIX: Ảnh nháp sẽ hiển thị chính xác màu filter như Camera
                     <img 
                       src={photos[index]} 
                       className="w-full h-full object-cover" 
                       style={{ 
-                        filter: `${filters.find(f => f.id === selectedFilter)?.css || ''} ${skinSmoothness > 0 ? `blur(${skinSmoothness/100}px) brightness(${1 + skinSmoothness/200}) saturate(1.1)` : ''}` 
+                        filter: `${filters.find(f => f.id === selectedFilter)?.css || ''} ${skinSmoothness > 0 ? `brightness(${1 + skinSmoothness/300}) saturate(1.05) contrast(1.02)` : ''}` 
                       }}
                     />
                   ) : (
